@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState, useActionState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useActionState } from 'react';
 import { useFormStatus } from 'react-dom';
 import {
   Upload,
@@ -11,6 +12,7 @@ import {
   AlertTriangle,
   FilePlus,
   Trash2,
+  BookCopy,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
@@ -53,6 +55,30 @@ type TextFile = {
   content: string;
   isEditing?: boolean;
 };
+
+const sampleFilesData = [
+  {
+    name: 'ceo_announcement.txt',
+    content:
+      'To all employees,\nWe are excited to announce our return to the office, embracing a new hybrid model. We believe in-person collaboration is key to our culture. Further details will be shared by HR.',
+  },
+  {
+    name: 'hr_policy_final.txt',
+    content:
+      'Official Return-to-Office Policy:\nEffective October 1st, all employees are required to work from the office a minimum of 3 days per week (Tuesday, Wednesday, Thursday).',
+  },
+  {
+    name: 'facilities_memo.txt',
+    content:
+      'Facilities Update:\nThe office will be fully operational and ready for staff starting September 25th. All workspaces are available Monday through Friday, 8 AM to 6 PM.',
+  },
+  {
+    name: 'engineering_dept_rules.txt',
+    content:
+      'Engineering Team Mandate:\nTo maximize collaboration on Project Phoenix, all engineering staff must be in the office from Monday to Thursday, starting immediately.',
+  },
+];
+
 
 function SubmitButton({ hasFiles }: { hasFiles: boolean }) {
   const { pending } = useFormStatus();
@@ -134,6 +160,20 @@ export function UploadDocuments() {
       },
     ]);
   };
+  
+  const loadSampleFiles = () => {
+    const samples: TextFile[] = sampleFilesData.map((sample, index) => ({
+      id: `sample-${Date.now()}-${index}`,
+      name: sample.name,
+      content: sample.content,
+      isEditing: false,
+    }));
+    setTextFiles(prev => [...prev, ...samples]);
+     toast({
+      title: 'Sample Files Loaded',
+      description: 'The four sample documents have been added to the list.',
+    });
+  };
 
   const updateTextFile = (id: string, newContent: Partial<TextFile>) => {
     setTextFiles((prev) =>
@@ -142,20 +182,18 @@ export function UploadDocuments() {
   };
   
   const onFormAction = (formData: FormData) => {
-    // This function now correctly appends all files before the action is called.
-    const newFormData = new FormData();
     files.forEach((file) => {
-      newFormData.append('documents', file);
+      formData.append('documents', file);
     });
   
     textFiles.forEach((textFile) => {
       if (textFile.content.trim() !== '') {
         const file = new File([textFile.content], textFile.name, { type: 'text/plain' });
-        newFormData.append('documents', file);
+        formData.append('documents', file);
       }
     });
 
-    formAction(newFormData);
+    formAction(formData);
   };
 
   useEffect(() => {
@@ -314,10 +352,16 @@ export function UploadDocuments() {
               )}
             </div>
             <div className="flex flex-wrap items-center justify-between gap-4">
-              <Button type="button" variant="outline" onClick={addTextFile}>
-                <FilePlus className="mr-2 h-4 w-4" />
-                Add Text File
-              </Button>
+               <div className="flex flex-wrap gap-2">
+                <Button type="button" variant="outline" onClick={addTextFile}>
+                  <FilePlus className="mr-2 h-4 w-4" />
+                  Add Text File
+                </Button>
+                <Button type="button" variant="secondary" onClick={loadSampleFiles}>
+                  <BookCopy className="mr-2 h-4 w-4" />
+                  Load Samples
+                </Button>
+              </div>
               <SubmitButton hasFiles={files.length > 0 || textFiles.some(tf => tf.content.trim() !== '')} />
             </div>
           </form>
