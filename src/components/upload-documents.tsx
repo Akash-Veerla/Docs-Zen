@@ -10,6 +10,8 @@ import {
   CheckCircle,
   AlertTriangle,
 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { useRouter } from 'next/navigation';
 
 import {
   Card,
@@ -19,19 +21,24 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { analyzeDocuments } from '@/app/actions';
+import { analyzeDocuments, Report } from '@/app/actions';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogFooter,
 } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { Input } from './ui/input';
 
-const initialState = {
+const initialState: {
+  report: Report | null;
+  error: string | null;
+  key: number;
+} = {
   report: null,
   error: null,
   key: 0,
@@ -60,6 +67,9 @@ export function UploadDocuments() {
   const [isResultOpen, setIsResultOpen] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
+  const router = useRouter();
+
 
   const handleFiles = (newFiles: FileList | null) => {
     if (newFiles) {
@@ -107,14 +117,22 @@ export function UploadDocuments() {
   };
 
   useEffect(() => {
-    if (state.report || state.error) {
+    if (state.key > 0) {
       setIsResultOpen(true);
       if (state.report) {
+        toast({
+          title: "Analysis Complete!",
+          description: `Report ${state.report.id} has been generated.`,
+          action: <Button variant="outline" size="sm" onClick={() => router.push('/reports')}>View Reports</Button>,
+        });
         formRef.current?.reset();
         setFiles([]);
       }
     }
-  }, [state]);
+  }, [state, toast, router]);
+  
+
+  const closeDialog = () => setIsResultOpen(false);
 
   return (
     <>
@@ -215,7 +233,7 @@ export function UploadDocuments() {
             )}
             <DialogDescription>
               {state.report
-                ? 'The following conflicts and ambiguities were found.'
+                ? `Report ${state.report.id} is ready. The following conflicts and ambiguities were found.`
                 : state.error}
             </DialogDescription>
           </DialogHeader>
@@ -223,16 +241,20 @@ export function UploadDocuments() {
             <ScrollArea className="h-full pr-4">
               {state.report && (
                 <pre className="text-sm whitespace-pre-wrap font-code bg-secondary p-4 rounded-md">
-                  {state.report}
+                  {state.report.reportContent}
                 </pre>
               )}
-              {state.error && !state.report && (
+              {state.error && (
                 <div className="text-sm text-destructive bg-destructive/10 p-4 rounded-md">
                   {state.error}
                 </div>
               )}
             </ScrollArea>
           </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={closeDialog}>Close</Button>
+            {state.report && <Button onClick={() => router.push('/reports')}>View All Reports</Button>}
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>

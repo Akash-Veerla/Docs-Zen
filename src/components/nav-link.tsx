@@ -20,12 +20,14 @@ export default function NavLink({
   ...props
 }: NavLinkProps) {
   const pathname = usePathname();
-  const isActive = !disabled && pathname === href;
+  const isActive = !disabled && (
+    pathname === href || (href !== '/dashboard' && pathname.startsWith(href))
+  );
 
   return (
     <Link
       href={disabled ? '#' : href}
-      className={cn(disabled && 'pointer-events-none')}
+      className={cn(disabled && 'pointer-events-none opacity-50')}
       aria-disabled={disabled}
       tabIndex={disabled ? -1 : undefined}
       {...props}

@@ -45,7 +45,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <SidebarFooter>
           <SidebarMenu>
             <SidebarMenuItem>
-              <NavLink href="/settings" disabled>
+              <NavLink href="/settings">
                 <Settings />
                 <span>Settings</span>
               </NavLink>
