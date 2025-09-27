@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, useTransition } from 'react';
-import { useActionState } from 'react';
+import { useFormState } from 'react-dom';
 import { useFormStatus } from 'react-dom';
 import {
   Upload,
@@ -75,7 +75,7 @@ export function UploadDocuments() {
   const [files, setFiles] = useState<File[]>([]);
   const [textFiles, setTextFiles] = useState<TextFile[]>([]);
   const [dragActive, setDragActive] = useState(false);
-  const [state, formAction] = useActionState(analyzeDocuments, initialState);
+  const [state, formAction] = useFormState(analyzeDocuments, initialState);
   const [isPending, startTransition] = useTransition();
   const [isResultOpen, setIsResultOpen] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
@@ -145,15 +145,19 @@ export function UploadDocuments() {
 
   const customSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const formData = new FormData(event.currentTarget);
+    const formData = new FormData(); // Create a new FormData object
 
+    // Append uploaded files
     files.forEach((file) => {
       formData.append('documents', file);
     });
 
+    // Append text files
     textFiles.forEach((textFile) => {
-      const file = new File([textFile.content], textFile.name, { type: 'text/plain' });
-      formData.append('documents', file);
+      if (textFile.content.trim() !== '') {
+        const file = new File([textFile.content], textFile.name, { type: 'text/plain' });
+        formData.append('documents', file);
+      }
     });
 
     startTransition(() => {
@@ -162,6 +166,8 @@ export function UploadDocuments() {
   };
 
   useEffect(() => {
+    // This effect is no longer strictly necessary with the new customSubmit
+    // but can be kept for other purposes or removed.
     if (fileInputRef.current) {
       const dataTransfer = new DataTransfer();
       files.forEach((file) => dataTransfer.items.add(file));
@@ -246,10 +252,10 @@ export function UploadDocuments() {
               </label>
 
               {(files.length > 0 || textFiles.length > 0) && (
-                <div className="space-y-2">
-                  <h3 className="font-medium">Documents for Analysis:</h3>
-                  <ScrollArea className="h-72 pr-4">
-                    <ul className="space-y-3">
+                 <div className="space-y-2">
+                 <h3 className="font-medium">Documents for Analysis:</h3>
+                 <ScrollArea className="h-72 pr-4">
+                   <ul className="space-y-3">
                       {files.map((file, index) => (
                         <li
                           key={`${file.name}-${file.lastModified}-${index}`}
@@ -329,7 +335,7 @@ export function UploadDocuments() {
                 <FilePlus className="mr-2 h-4 w-4" />
                 Add Text File
               </Button>
-              <SubmitButton hasFiles={files.length + textFiles.length > 0} />
+              <SubmitButton hasFiles={files.length > 0 || textFiles.some(tf => tf.content.trim() !== '')} />
             </div>
           </form>
         </CardContent>
