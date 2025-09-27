@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState, useActionState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useActionState } from 'react';
 import { useFormStatus } from 'react-dom';
 import {
   Upload,
@@ -232,7 +233,7 @@ export function UploadDocuments() {
               {(files.length > 0 || textFiles.length > 0) && (
                 <div className="space-y-2">
                   <h3 className="font-medium">Documents for Analysis:</h3>
-                  <ScrollArea className="max-h-96 pr-4">
+                  <ScrollArea className="h-72 pr-4">
                     <ul className="space-y-3">
                       {files.map((file, index) => (
                         <li
