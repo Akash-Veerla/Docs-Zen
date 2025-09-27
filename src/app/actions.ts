@@ -148,11 +148,16 @@ export async function analyzeDocuments(
   }
 }
 
-export async function getReports(): Promise<Report[]> {
+export async function getReports(options?: { limit?: number }): Promise<Report[]> {
   // In a real app, you'd fetch from a database.
   // Here we just return the in-memory array.
-  return Promise.resolve(reportsStore);
+  const allReports = [...reportsStore];
+  if (options?.limit) {
+    return Promise.resolve(allReports.slice(0, options.limit));
+  }
+  return Promise.resolve(allReports);
 }
+
 
 export async function getReport(id: string): Promise<Report | undefined> {
   return Promise.resolve(reportsStore.find(r => r.id === id));

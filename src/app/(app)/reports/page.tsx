@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { MoreHorizontal, Download, Eye, LoaderCircle } from 'lucide-react';
+import { MoreHorizontal, Download, Eye, LoaderCircle, BarChart2 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,6 +27,13 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from '@/components/ui/chart';
+import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from 'recharts';
 
 export default function ReportsPage() {
   const [reports, setReports] = useState<Report[]>([]);
@@ -37,7 +44,8 @@ export default function ReportsPage() {
   useEffect(() => {
     async function fetchReports() {
       setLoading(true);
-      const fetchedReports = await getReports();
+      // Fetch only the 5 most recent reports
+      const fetchedReports = await getReports({ limit: 5 });
       setReports(fetchedReports);
       setLoading(false);
     }
@@ -61,11 +69,58 @@ export default function ReportsPage() {
     URL.revokeObjectURL(url);
   };
 
+  const chartData = reports
+    .map((report) => ({
+      name: report.id,
+      conflicts: report.conflicts,
+    }))
+    .reverse(); // Reverse to show oldest to newest in chart
+
   return (
     <div className="space-y-8">
       <h1 className="text-3xl font-bold tracking-tight font-headline text-primary">
-        Reports
+        Recent Reports
       </h1>
+      
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <BarChart2 className="h-5 w-5" />
+            Recent Conflict Analysis
+          </CardTitle>
+          <CardDescription>
+            A summary of conflicts found in your last {reports.length} analyses.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="h-60 flex items-center justify-center">
+              <LoaderCircle className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : (
+            <ChartContainer config={{}} className="h-60 w-full">
+              <ResponsiveContainer>
+                <BarChart data={chartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                  <XAxis
+                    dataKey="name"
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={10}
+                    fontSize={12}
+                  />
+                  <YAxis allowDecimals={false} tickMargin={10} fontSize={12} />
+                  <ChartTooltip
+                    cursor={false}
+                    content={<ChartTooltipContent indicator="dot" />}
+                  />
+                  <Bar dataKey="conflicts" fill="hsl(var(--primary))" radius={4} />
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartContainer>
+          )}
+        </CardContent>
+      </Card>
+      
       <div className="rounded-lg border">
         <Table>
           <TableHeader>
