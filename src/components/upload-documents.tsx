@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { useFormState, useFormStatus } from 'react-dom';
+import { useEffect, useRef, useState, useActionState } from 'react';
+import { useFormStatus } from 'react-dom';
 import {
   Upload,
   File as FileIcon,
@@ -56,7 +56,7 @@ function SubmitButton({ hasFiles }: { hasFiles: boolean }) {
 export function UploadDocuments() {
   const [files, setFiles] = useState<File[]>([]);
   const [dragActive, setDragActive] = useState(false);
-  const [state, formAction] = useFormState(analyzeDocuments, initialState);
+  const [state, formAction] = useActionState(analyzeDocuments, initialState);
   const [isResultOpen, setIsResultOpen] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
