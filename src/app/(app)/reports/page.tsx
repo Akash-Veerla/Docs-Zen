@@ -50,7 +50,7 @@ export default function ReportsPage() {
       setLoading(false);
     }
     fetchReports();
-  }, []);
+  });
 
   const handleViewReport = (report: Report) => {
     setSelectedReport(report);
