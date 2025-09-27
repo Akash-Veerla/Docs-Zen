@@ -182,18 +182,24 @@ export function UploadDocuments() {
   };
   
   const onFormAction = (formData: FormData) => {
-    files.forEach((file) => {
-      formData.append('documents', file);
-    });
-  
+    // This function will be called by the form's action.
+    // We augment the form data with our text files.
+    const finalFormData = new FormData();
+    
+    // Append uploaded files
+    for (const file of files) {
+      finalFormData.append('documents', file);
+    }
+
+    // Append text files as File objects
     textFiles.forEach((textFile) => {
       if (textFile.content.trim() !== '') {
         const file = new File([textFile.content], textFile.name, { type: 'text/plain' });
-        formData.append('documents', file);
+        finalFormData.append('documents', file);
       }
     });
 
-    formAction(formData);
+    formAction(finalFormData);
   };
 
   useEffect(() => {
