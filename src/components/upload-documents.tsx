@@ -164,7 +164,7 @@ export function UploadDocuments() {
                     and drop
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    DOCX, PPTX, PDF, TXT, etc. (up to 10MB each)
+                    DOCX, PPTX, PDF, MD, TXT, etc. (up to 10MB each)
                   </p>
                 </div>
                 <Input
