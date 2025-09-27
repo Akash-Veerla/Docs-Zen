@@ -55,16 +55,13 @@ async function extractText(file: File): Promise<string | null> {
     ) {
       const pptx = new PptxGenJS();
       const data = await pptx.load(arrayBuffer as ArrayBuffer);
-      // This was incorrect. We need to extract text from shapes properly.
       let fullText = '';
       for (const slide of data.slides) {
-        if (slide.objects) {
-          for (const object of slide.objects) {
-             if (object.shape && object.shape.text) {
-               fullText += object.shape.text.text + ' ';
-             }
+        slide.objects?.forEach((object) => {
+          if ('text' in object && object.text?.text) {
+            fullText += object.text.text + ' ';
           }
-        }
+        });
       }
       return fullText;
     }
@@ -105,10 +102,14 @@ export async function analyzeDocuments(
       })
     );
     
-    const validDocuments = documentContents.filter(doc => doc && doc.content && doc.content.trim() !== '');
+    const validDocuments = documentContents.filter(doc => doc.content && doc.content.trim() !== '');
 
+    if (validDocuments.length < documents.length) {
+       console.warn('Some documents were empty or could not be parsed.');
+    }
+    
     if (validDocuments.length < 2) {
-      return { report: null, error: "At least two documents must have content to be analyzed. Some files may be empty or unsupported.", key };
+      return { report: null, error: "At least two documents must have processable content. Some files may be empty or unsupported.", key };
     }
 
     const result = await detectDocumentConflicts({ documents: validDocuments as any });
@@ -184,7 +185,7 @@ export async function updateProfile(data: { name: string; email: string }) {
 export async function updateNotificationSettings(data: {
   communication: boolean;
   marketing: boolean;
-  security: boolean;
+security: boolean;
 }) {
   console.log('Updating notification settings with:', data);
   // In a real app, save this to your user database

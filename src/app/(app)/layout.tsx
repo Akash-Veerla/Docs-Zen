@@ -1,4 +1,4 @@
-import { Home, FileText, CreditCard, Settings } from 'lucide-react';
+import { Home, CreditCard, Settings } from 'lucide-react';
 import {
   SidebarProvider,
   Sidebar,
@@ -26,12 +26,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <NavLink href="/dashboard">
                 <Home />
                 <span>Dashboard</span>
-              </NavLink>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <NavLink href="/reports">
-                <FileText />
-                <span>Reports</span>
               </NavLink>
             </SidebarMenuItem>
             <SidebarMenuItem>
