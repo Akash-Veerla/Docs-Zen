@@ -56,12 +56,16 @@ async function extractText(file: File): Promise<string | null> {
       const pptx = new PptxGenJS();
       const data = await pptx.load(arrayBuffer as ArrayBuffer);
       let fullText = '';
-      for (const slide of data.slides) {
-        slide.objects?.forEach((object) => {
-          if ('text' in object && object.text?.text) {
-            fullText += object.text.text + ' ';
-          }
-        });
+      if(data.slides) {
+        for (const slide of data.slides) {
+            if(slide.objects) {
+              slide.objects.forEach((object) => {
+                if ('text' in object && object.text?.text) {
+                  fullText += object.text.text + ' ';
+                }
+              });
+            }
+        }
       }
       return fullText;
     }
