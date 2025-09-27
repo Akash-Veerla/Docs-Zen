@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useTransition, useActionState } from 'react';
+import { useEffect, useRef, useState, useActionState } from 'react';
 import { useFormStatus } from 'react-dom';
 import {
   Upload,
@@ -74,7 +74,7 @@ export function UploadDocuments() {
   const [files, setFiles] = useState<File[]>([]);
   const [textFiles, setTextFiles] = useState<TextFile[]>([]);
   const [dragActive, setDragActive] = useState(false);
-  const [state, formAction, isPending] = useActionState(analyzeDocuments, initialState);
+  const [state, formAction] = useActionState(analyzeDocuments, initialState);
   const [isResultOpen, setIsResultOpen] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -141,18 +141,7 @@ export function UploadDocuments() {
     );
   };
 
-  const customSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const formData = new FormData(event.currentTarget);
-
-    // Append uploaded files that might not be in the form's input
-    files.forEach((file) => {
-      // Avoid duplicating files if they are already in the form's input
-      if (!Array.from(formData.getAll('documents')).some(f => (f as File).name === file.name)) {
-        formData.append('documents', file);
-      }
-    });
-
+  const onFormAction = (formData: FormData) => {
     // Append text files by creating File objects
     textFiles.forEach((textFile) => {
       if (textFile.content.trim() !== '') {
@@ -160,19 +149,24 @@ export function UploadDocuments() {
         formData.append('documents', file);
       }
     });
-    
+
+    files.forEach((file) => {
+        if (!Array.from(formData.getAll('documents')).some(f => (f as File).name === file.name)) {
+          formData.append('documents', file);
+        }
+      });
     formAction(formData);
-  };
+  }
 
   useEffect(() => {
     // This effect is to keep the native file input in sync with the state
-    // which is good practice if you have other logic depending on the input's files
     if (fileInputRef.current) {
       const dataTransfer = new DataTransfer();
       files.forEach((file) => dataTransfer.items.add(file));
       fileInputRef.current.files = dataTransfer.files;
     }
   }, [files]);
+
 
   useEffect(() => {
     if (state.key > 0) {
@@ -216,7 +210,7 @@ export function UploadDocuments() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form ref={formRef} action={formAction as any} onSubmit={customSubmit} className="space-y-6">
+          <form ref={formRef} action={onFormAction} className="space-y-6">
             <div className="space-y-4">
               <label
                 htmlFor="dropzone-file"
