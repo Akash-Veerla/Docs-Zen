@@ -160,8 +160,15 @@ export function UploadDocuments() {
 
   useEffect(() => {
     if (state.key > 0) {
-      setIsResultOpen(true);
-      if (state.report) {
+      if (state.error) {
+          toast({
+          variant: 'destructive',
+          title: 'Analysis Failed',
+          description: state.error,
+        });
+      }
+      else if (state.report) {
+        setIsResultOpen(true);
         toast({
           title: "Analysis Complete!",
           description: `Report ${state.report.id} has been generated.`,
@@ -218,14 +225,15 @@ export function UploadDocuments() {
                   multiple
                   accept=".txt,.md,.docx,.pptx,.pdf"
                   onChange={(e) => handleFiles(e.target.files)}
+                  ref={fileInputRef}
                 />
               </label>
 
               {(files.length > 0 || textFiles.length > 0) && (
                 <div className="space-y-2">
                   <h3 className="font-medium">Documents for Analysis:</h3>
-                  <ScrollArea className="max-h-64 pr-2">
-                    <ul className="space-y-2">
+                  <ScrollArea className="max-h-96 pr-4">
+                    <ul className="space-y-3">
                       {files.map((file, index) => (
                         <li
                           key={`${file.name}-${file.lastModified}-${index}`}
