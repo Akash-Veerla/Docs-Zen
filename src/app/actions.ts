@@ -34,34 +34,46 @@ function countConflicts(reportContent: string): number {
 }
 
 async function extractText(file: File): Promise<string | null> {
-  const arrayBuffer = await file.arrayBuffer();
-  if (file.type === 'application/pdf') {
-    const data = await pdfParse(Buffer.from(arrayBuffer));
-    return data.text;
-  }
-  if (
-    file.type ===
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-  ) {
-    const { value } = await mammoth.extractRawText({
-      arrayBuffer,
-    });
-    return value;
-  }
-  if (
-    file.type ===
-    'application/vnd.openxmlformats-officedocument.presentationml.presentation'
-  ) {
-    const pptx = new PptxGenJS();
-    const data = await pptx.load(arrayBuffer as ArrayBuffer);
-    return data.slides
-      .map((slide) =>
-        slide.spres.map((shape) => shape.data.map((item) => item.text).join(' ')).join(' ')
-      )
-      .join(' ');
-  }
-  if (file.type.startsWith('text/') || file.type === 'text/markdown') {
-    return file.text();
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    if (file.type === 'application/pdf') {
+      const data = await pdfParse(Buffer.from(arrayBuffer));
+      return data.text;
+    }
+    if (
+      file.type ===
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    ) {
+      const { value } = await mammoth.extractRawText({
+        arrayBuffer,
+      });
+      return value;
+    }
+    if (
+      file.type ===
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+    ) {
+      const pptx = new PptxGenJS();
+      const data = await pptx.load(arrayBuffer as ArrayBuffer);
+      // This was incorrect. We need to extract text from shapes properly.
+      let fullText = '';
+      for (const slide of data.slides) {
+        if (slide.objects) {
+          for (const object of slide.objects) {
+             if (object.shape && object.shape.text) {
+               fullText += object.shape.text.text + ' ';
+             }
+          }
+        }
+      }
+      return fullText;
+    }
+    if (file.type.startsWith('text/') || file.type === 'text/markdown') {
+      return file.text();
+    }
+  } catch (error) {
+    console.error(`Error extracting text from ${file.name}:`, error);
+    return null; // Return null if text extraction fails
   }
   return null;
 }
@@ -96,7 +108,7 @@ export async function analyzeDocuments(
     const validDocuments = documentContents.filter(doc => doc && doc.content && doc.content.trim() !== '');
 
     if (validDocuments.length < 2) {
-      return { report: null, error: "At least two documents must have content to be analyzed.", key };
+      return { report: null, error: "At least two documents must have content to be analyzed. Some files may be empty or unsupported.", key };
     }
 
     const result = await detectDocumentConflicts({ documents: validDocuments as any });

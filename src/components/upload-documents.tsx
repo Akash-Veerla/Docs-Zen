@@ -184,14 +184,8 @@ export function UploadDocuments() {
   const onFormAction = (formData: FormData) => {
     // This function will be called by the form's action.
     // We augment the form data with our text files.
-    const finalFormData = new FormData();
-    
-    // Append uploaded files
-    for (const file of files) {
-      finalFormData.append('documents', file);
-    }
+    const finalFormData = new FormData(formRef.current ?? undefined);
 
-    // Append text files as File objects
     textFiles.forEach((textFile) => {
       if (textFile.content.trim() !== '') {
         const file = new File([textFile.content], textFile.name, { type: 'text/plain' });
