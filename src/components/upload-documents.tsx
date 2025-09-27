@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { useFormState, useFormStatus } from 'react-dom';
+import { useEffect, useRef, useState, useActionState } from 'react';
+import { useFormStatus } from 'react-dom';
 import {
   Upload,
   File as FileIcon,
@@ -74,7 +74,7 @@ export function UploadDocuments() {
   const [files, setFiles] = useState<File[]>([]);
   const [textFiles, setTextFiles] = useState<TextFile[]>([]);
   const [dragActive, setDragActive] = useState(false);
-  const [state, formAction] = useFormState(analyzeDocuments, initialState);
+  const [state, formAction] = useActionState(analyzeDocuments, initialState);
   const [isResultOpen, setIsResultOpen] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -140,36 +140,23 @@ export function UploadDocuments() {
       prev.map((tf) => (tf.id === id ? { ...tf, ...newContent } : tf))
     );
   };
-
+  
   const onFormAction = (formData: FormData) => {
-    // Clear the form data to rebuild it
-    for (const key of formData.keys()) {
-      formData.delete(key);
-    }
-
+    // This function now correctly appends all files before the action is called.
+    const newFormData = new FormData();
     files.forEach((file) => {
-      formData.append('documents', file);
+      newFormData.append('documents', file);
     });
   
     textFiles.forEach((textFile) => {
       if (textFile.content.trim() !== '') {
         const file = new File([textFile.content], textFile.name, { type: 'text/plain' });
-        formData.append('documents', file);
+        newFormData.append('documents', file);
       }
     });
 
-    formAction(formData);
+    formAction(newFormData);
   };
-  
-
-  useEffect(() => {
-    if (fileInputRef.current) {
-      const dataTransfer = new DataTransfer();
-      files.forEach((file) => dataTransfer.items.add(file));
-      fileInputRef.current.files = dataTransfer.files;
-    }
-  }, [files]);
-
 
   useEffect(() => {
     if (state.key > 0) {
