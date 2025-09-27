@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState, useActionState } from 'react';
-import { useFormStatus } from 'react-dom';
+import { useEffect, useRef, useState } from 'react';
+import { useFormState, useFormStatus } from 'react-dom';
 import {
   Upload,
   File as FileIcon,
@@ -74,7 +74,7 @@ export function UploadDocuments() {
   const [files, setFiles] = useState<File[]>([]);
   const [textFiles, setTextFiles] = useState<TextFile[]>([]);
   const [dragActive, setDragActive] = useState(false);
-  const [state, formAction] = useActionState(analyzeDocuments, initialState);
+  const [state, formAction] = useFormState(analyzeDocuments, initialState);
   const [isResultOpen, setIsResultOpen] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -142,29 +142,27 @@ export function UploadDocuments() {
   };
 
   const onFormAction = (formData: FormData) => {
-    const combinedFormData = new FormData();
-  
+    // Clear the form data to rebuild it
+    for (const key of formData.keys()) {
+      formData.delete(key);
+    }
+
     files.forEach((file) => {
-      combinedFormData.append('documents', file);
+      formData.append('documents', file);
     });
   
     textFiles.forEach((textFile) => {
       if (textFile.content.trim() !== '') {
         const file = new File([textFile.content], textFile.name, { type: 'text/plain' });
-        combinedFormData.append('documents', file);
+        formData.append('documents', file);
       }
     });
 
-    // Clear existing files from the original formData to avoid duplicates if any
-    formData.delete('documents');
-
-    // Call the form action with the correctly assembled data
-    formAction(combinedFormData);
+    formAction(formData);
   };
   
 
   useEffect(() => {
-    // This effect is to keep the native file input in sync with the state
     if (fileInputRef.current) {
       const dataTransfer = new DataTransfer();
       files.forEach((file) => dataTransfer.items.add(file));
