@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import { useActionState } from 'react';
 import { useFormStatus } from 'react-dom';
 import {
@@ -11,7 +11,7 @@ import {
   CheckCircle,
   AlertTriangle,
   FilePlus,
-  Trash2
+  Trash2,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
@@ -53,7 +53,7 @@ type TextFile = {
   name: string;
   content: string;
   isEditing?: boolean;
-}
+};
 
 function SubmitButton({ hasFiles }: { hasFiles: boolean }) {
   const { pending } = useFormStatus();
@@ -76,12 +76,12 @@ export function UploadDocuments() {
   const [textFiles, setTextFiles] = useState<TextFile[]>([]);
   const [dragActive, setDragActive] = useState(false);
   const [state, formAction] = useActionState(analyzeDocuments, initialState);
+  const [isPending, startTransition] = useTransition();
   const [isResultOpen, setIsResultOpen] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const router = useRouter();
-
 
   const handleFiles = (newFiles: FileList | null) => {
     if (newFiles) {
@@ -119,42 +119,52 @@ export function UploadDocuments() {
   const removeFile = (index: number) => {
     setFiles((prev) => prev.filter((_, i) => i !== index));
   };
-  
+
   const removeTextFile = (id: string) => {
     setTextFiles((prev) => prev.filter((tf) => tf.id !== id));
-  }
+  };
 
   const addTextFile = () => {
     const newId = `text-file-${Date.now()}`;
-    setTextFiles(prev => [...prev, { id: newId, name: `new-document-${prev.length + 1}.txt`, content: '', isEditing: true }]);
+    setTextFiles((prev) => [
+      ...prev,
+      {
+        id: newId,
+        name: `new-document-${prev.length + 1}.txt`,
+        content: '',
+        isEditing: true,
+      },
+    ]);
   };
-  
+
   const updateTextFile = (id: string, newContent: Partial<TextFile>) => {
-    setTextFiles(prev => prev.map(tf => tf.id === id ? { ...tf, ...newContent } : tf));
+    setTextFiles((prev) =>
+      prev.map((tf) => (tf.id === id ? { ...tf, ...newContent } : tf))
+    );
   };
 
   const customSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
-    
-    // Append programmatically managed files
-    files.forEach(file => {
+
+    files.forEach((file) => {
       formData.append('documents', file);
     });
-    
-    // Append text files as File objects
-    textFiles.forEach(textFile => {
+
+    textFiles.forEach((textFile) => {
       const file = new File([textFile.content], textFile.name, { type: 'text/plain' });
       formData.append('documents', file);
     });
 
-    formAction(formData);
+    startTransition(() => {
+      formAction(formData);
+    });
   };
 
   useEffect(() => {
     if (fileInputRef.current) {
       const dataTransfer = new DataTransfer();
-      files.forEach(file => dataTransfer.items.add(file));
+      files.forEach((file) => dataTransfer.items.add(file));
       fileInputRef.current.files = dataTransfer.files;
     }
   }, [files]);
@@ -162,18 +172,25 @@ export function UploadDocuments() {
   useEffect(() => {
     if (state.key > 0) {
       if (state.error) {
-          toast({
+        toast({
           variant: 'destructive',
           title: 'Analysis Failed',
           description: state.error,
         });
-      }
-      else if (state.report) {
+      } else if (state.report) {
         setIsResultOpen(true);
         toast({
-          title: "Analysis Complete!",
+          title: 'Analysis Complete!',
           description: `Report ${state.report.id} has been generated.`,
-          action: <Button variant="outline" size="sm" onClick={() => router.push('/reports')}>View Reports</Button>,
+          action: (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => router.push('/reports')}
+            >
+              View Reports
+            </Button>
+          ),
         });
         formRef.current?.reset();
         setFiles([]);
@@ -181,7 +198,6 @@ export function UploadDocuments() {
       }
     }
   }, [state, toast, router]);
-  
 
   const closeDialog = () => setIsResultOpen(false);
 
@@ -211,8 +227,7 @@ export function UploadDocuments() {
                 <div className="flex flex-col items-center justify-center pt-5 pb-6">
                   <Upload className="w-8 h-8 mb-3 text-muted-foreground" />
                   <p className="mb-2 text-sm text-muted-foreground">
-                    <span className="font-semibold">Click to upload</span> or drag
-                    and drop
+                    <span className="font-semibold">Click to upload</span> or drag and drop
                   </p>
                   <p className="text-xs text-muted-foreground">
                     DOCX, PPTX, PDF, MD, TXT, etc. (up to 10MB each)
@@ -242,7 +257,9 @@ export function UploadDocuments() {
                         >
                           <div className="flex items-center gap-2 overflow-hidden">
                             <FileIcon className="h-5 w-5 text-primary flex-shrink-0" />
-                            <span className="text-sm font-medium truncate" title={file.name}>{file.name}</span>
+                            <span className="text-sm font-medium truncate" title={file.name}>
+                              {file.name}
+                            </span>
                             <span className="text-xs text-muted-foreground flex-shrink-0">
                               ({(file.size / 1024 / 1024).toFixed(2)} MB)
                             </span>
@@ -260,35 +277,43 @@ export function UploadDocuments() {
                       {textFiles.map((textFile) => (
                         <li key={textFile.id} className="p-2 rounded-md bg-secondary animate-in fade-in-50 space-y-2">
                           <div className="flex items-center justify-between">
-                             <div className="flex items-center gap-2 flex-grow overflow-hidden">
-                                <FileIcon className="h-5 w-5 text-primary flex-shrink-0" />
-                                {textFile.isEditing ? (
-                                  <Input 
-                                    value={textFile.name}
-                                    onChange={(e) => updateTextFile(textFile.id, { name: e.target.value })}
-                                    onBlur={() => updateTextFile(textFile.id, { isEditing: false })}
-                                    className="h-8 text-sm"
-                                    autoFocus
-                                  />
-                                ) : (
-                                  <span className="text-sm font-medium truncate cursor-pointer" onClick={() => updateTextFile(textFile.id, { isEditing: true })} title={textFile.name}>
-                                    {textFile.name}
-                                  </span>
-                                )}
-                             </div>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => removeTextFile(textFile.id)}
-                              >
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
+                            <div className="flex items-center gap-2 flex-grow overflow-hidden">
+                              <FileIcon className="h-5 w-5 text-primary flex-shrink-0" />
+                              {textFile.isEditing ? (
+                                <Input
+                                  value={textFile.name}
+                                  onChange={(e) =>
+                                    updateTextFile(textFile.id, { name: e.target.value })
+                                  }
+                                  onBlur={() => updateTextFile(textFile.id, { isEditing: false })}
+                                  className="h-8 text-sm"
+                                  autoFocus
+                                />
+                              ) : (
+                                <span
+                                  className="text-sm font-medium truncate cursor-pointer"
+                                  onClick={() => updateTextFile(textFile.id, { isEditing: true })}
+                                  title={textFile.name}
+                                >
+                                  {textFile.name}
+                                </span>
+                              )}
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => removeTextFile(textFile.id)}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
                           </div>
-                          <Textarea 
+                          <Textarea
                             placeholder="Enter document content here..."
                             value={textFile.content}
-                            onChange={(e) => updateTextFile(textFile.id, { content: e.target.value })}
+                            onChange={(e) =>
+                              updateTextFile(textFile.id, { content: e.target.value })
+                            }
                             className="w-full font-code"
                             rows={5}
                           />
@@ -346,8 +371,12 @@ export function UploadDocuments() {
             </ScrollArea>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={closeDialog}>Close</Button>
-            {state.report && <Button onClick={() => router.push('/reports')}>View All Reports</Button>}
+            <Button variant="outline" onClick={closeDialog}>
+              Close
+            </Button>
+            {state.report && (
+              <Button onClick={() => router.push('/reports')}>View All Reports</Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
