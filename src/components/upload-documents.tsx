@@ -142,21 +142,26 @@ export function UploadDocuments() {
   };
 
   const onFormAction = (formData: FormData) => {
-    // Append text files by creating File objects
+    const combinedFormData = new FormData();
+  
+    files.forEach((file) => {
+      combinedFormData.append('documents', file);
+    });
+  
     textFiles.forEach((textFile) => {
       if (textFile.content.trim() !== '') {
         const file = new File([textFile.content], textFile.name, { type: 'text/plain' });
-        formData.append('documents', file);
+        combinedFormData.append('documents', file);
       }
     });
 
-    files.forEach((file) => {
-        if (!Array.from(formData.getAll('documents')).some(f => (f as File).name === file.name)) {
-          formData.append('documents', file);
-        }
-      });
-    formAction(formData);
-  }
+    // Clear existing files from the original formData to avoid duplicates if any
+    formData.delete('documents');
+
+    // Call the form action with the correctly assembled data
+    formAction(combinedFormData);
+  };
+  
 
   useEffect(() => {
     // This effect is to keep the native file input in sync with the state
