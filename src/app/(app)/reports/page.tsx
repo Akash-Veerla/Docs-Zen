@@ -63,7 +63,7 @@ export default function ReportsPage() {
 
   return (
     <div className="space-y-8">
-      <h1 className="text-3xl font-bold tracking-tight font-headline">
+      <h1 className="text-3xl font-bold tracking-tight font-headline text-primary">
         Reports
       </h1>
       <div className="rounded-lg border">
@@ -85,7 +85,7 @@ export default function ReportsPage() {
               <TableRow>
                 <TableCell colSpan={6} className="h-24 text-center">
                   <div className="flex justify-center items-center">
-                    <LoaderCircle className="mr-2 h-6 w-6 animate-spin" />
+                    <LoaderCircle className="mr-2 h-6 w-6 animate-spin text-primary" />
                     <span>Loading reports...</span>
                   </div>
                 </TableCell>
@@ -99,7 +99,7 @@ export default function ReportsPage() {
             ) : (
               reports.map((report) => (
                 <TableRow key={report.id}>
-                  <TableCell className="font-medium">{report.id}</TableCell>
+                  <TableCell className="font-medium text-primary">{report.id}</TableCell>
                   <TableCell>{report.date}</TableCell>
                   <TableCell>{report.files}</TableCell>
                   <TableCell>

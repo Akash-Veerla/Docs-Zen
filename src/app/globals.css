@@ -4,74 +4,69 @@
 
 @layer base {
   :root {
-    --background: 210 40% 98%; /* Material Blue Grey 50 */
-    --foreground: 216 12% 13%; /* Material Blue Grey 900 */
+    --background: 222 84% 4.9%; /* Dark Blue */
+    --foreground: 210 40% 98%; /* Light Gray */
+    --card: 222 84% 8%; /* Darker Blue */
+    --card-foreground: 210 40% 98%;
+    --popover: 222 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 180 100% 50%; /* Cyan */
+    --primary-foreground: 222 84% 4.9%;
+    --secondary: 217 33% 17%; /* Muted Blue */
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%; /* Lighter Muted Blue */
+    --accent: 300 100% 50%; /* Magenta */
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 63% 31%; /* Dark Red */
+    --destructive-foreground: 210 40% 98%;
+    --border: 217 33% 17%;
+    --input: 217 33% 17%;
+    --ring: 180 100% 50%;
+    --radius: 0.75rem;
+    --chart-1: 180 100% 50%; /* Cyan */
+    --chart-2: 300 100% 50%; /* Magenta */
+    --chart-3: 240 80% 60%;
+    --chart-4: 60 80% 55%;
+    --chart-5: 0 80% 60%;
+    --sidebar-background: 222 84% 6% / 0.8; /* Dark Blue with opacity */
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 180 100% 50%;
+    --sidebar-primary-foreground: 222 84% 4.9%;
+    --sidebar-accent: 222 84% 10%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 217 33% 17%;
+    --sidebar-ring: 180 100% 50%;
+  }
+
+  .light {
+    --background: 0 0% 98%;
+    --foreground: 222 84% 4.9%;
     --card: 0 0% 100%;
-    --card-foreground: 216 12% 13%;
+    --card-foreground: 222 84% 4.9%;
     --popover: 0 0% 100%;
-    --popover-foreground: 216 12% 13%;
-    --primary: 214 90% 59%; /* Material Blue 500 */
+    --popover-foreground: 222 84% 4.9%;
+    --primary: 180 100% 40%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 211 39% 93%; /* Material Blue Grey 100 */
-    --secondary-foreground: 216 12% 13%;
-    --muted: 211 39% 93%;
-    --muted-foreground: 215 14% 34%; /* Material Blue Grey 600 */
-    --accent: 24 95% 53%; /* Material Orange 500 */
+    --secondary: 0 0% 96.1%;
+    --secondary-foreground: 222 84% 4.9%;
+    --muted: 0 0% 96.1%;
+    --muted-foreground: 222 84% 35%;
+    --accent: 300 100% 40%;
     --accent-foreground: 0 0% 100%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 214 32% 91%; /* Material Blue Grey 200 */
-    --input: 214 32% 91%;
-    --ring: 214 90% 59%;
-    --radius: 0.75rem;
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
-    --sidebar-background: 210 40% 98% / 0.8; /* Material Blue Grey 50 with opacity */
-    --sidebar-foreground: 216 12% 13%;
-    --sidebar-primary: 214 90% 59%;
+    --border: 0 0% 91.3%;
+    --input: 0 0% 91.3%;
+    --ring: 180 100% 40%;
+    --sidebar-background: 0 0% 98% / 0.8;
+    --sidebar-foreground: 222 84% 4.9%;
+    --sidebar-primary: 180 100% 40%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 211 39% 93%;
-    --sidebar-accent-foreground: 216 12% 13%;
-    --sidebar-border: 214 32% 91%;
-    --sidebar-ring: 214 90% 59%;
-  }
- 
-  .dark {
-    --background: 216 12% 13%; /* Material Blue Grey 900 */
-    --foreground: 210 40% 98%; /* Material Blue Grey 50 */
-    --card: 215 14% 22%; /* Material Blue Grey 800 */
-    --card-foreground: 210 40% 98%;
-    --popover: 216 12% 13%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 211 90% 68%; /* Material Blue 300 */
-    --primary-foreground: 216 12% 13%;
-    --secondary: 215 14% 22%; /* Material Blue Grey 800 */
-    --secondary-foreground: 210 40% 98%;
-    --muted: 215 14% 22%;
-    --muted-foreground: 215 15% 65%; /* Material Blue Grey 400 */
-    --accent: 24 95% 63%; /* Material Orange 400 */
-    --accent-foreground: 216 12% 13%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 215 14% 34%; /* Material Blue Grey 600 */
-    --input: 215 14% 34%;
-    --ring: 211 90% 68%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
-    --sidebar-background: 216 12% 13% / 0.8; /* Material Blue Grey 900 with opacity */
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 211 90% 68%;
-    --sidebar-primary-foreground: 216 12% 13%;
-    --sidebar-accent: 215 14% 22%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 215 14% 34%;
-    --sidebar-ring: 211 90% 68%;
+    --sidebar-accent: 0 0% 96.1%;
+    --sidebar-accent-foreground: 222 84% 4.9%;
+    --sidebar-border: 0 0% 91.3%;
+    --sidebar-ring: 180 100% 40%;
   }
 }
 

@@ -55,7 +55,7 @@ export default function BillingPage() {
   return (
     <div className="space-y-8">
       <div className="text-center">
-        <h1 className="text-3xl font-bold tracking-tight font-headline">
+        <h1 className="text-3xl font-bold tracking-tight font-headline text-primary">
           Flexible Pricing for Every Team
         </h1>
         <p className="mt-2 text-lg text-muted-foreground">
@@ -94,7 +94,7 @@ export default function BillingPage() {
               <ul className="space-y-3">
                 {plan.features.map((feature) => (
                   <li key={feature} className="flex items-center gap-2">
-                    <Check className="h-5 w-5 text-green-500" />
+                    <Check className="h-5 w-5 text-cyan-400" />
                     <span className="text-sm">{feature}</span>
                   </li>
                 ))}

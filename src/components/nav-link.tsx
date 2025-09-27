@@ -32,7 +32,7 @@ export default function NavLink({
       tabIndex={disabled ? -1 : undefined}
       {...props}
     >
-      <SidebarMenuButton isActive={isActive} className={className}>
+      <SidebarMenuButton isActive={isActive} className={cn(className, isActive && 'glass-effect')}>
         {children}
       </SidebarMenuButton>
     </Link>
