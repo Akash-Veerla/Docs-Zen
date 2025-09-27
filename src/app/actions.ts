@@ -61,7 +61,7 @@ async function extractText(file: File): Promise<string | null> {
       )
       .join(' ');
   }
-  if (file.type.startsWith('text/')) {
+  if (file.type.startsWith('text/') || file.type === 'text/markdown') {
     return file.text();
   }
   return null;
