@@ -8,29 +8,31 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 
 const plans = [
   {
-    name: 'Starter',
-    price: '$10',
-    period: '/month',
-    description: 'For individuals and small teams starting out.',
+    name: 'Pay as you go',
+    price: '$1',
+    period: '/ document',
+    description: 'For occasional use and single projects.',
     features: [
-      'Up to 50 document analyses',
-      'Basic conflict reporting',
-      'Email support',
+      'Analyze one document',
+      'Generate one conflict report',
+      'Standard support',
     ],
-    cta: 'Choose Plan',
+    cta: 'Analyze Document',
   },
   {
-    name: 'Pro',
+    name: 'Subscription',
     price: '$40',
-    period: '/month',
-    description: 'For growing businesses with more complex needs.',
+    period: '/ month',
+    description: 'For teams with ongoing analysis needs.',
     features: [
-      'Up to 250 document analyses',
-      'Detailed conflict reporting with suggestions',
-      'Priority email support',
+      'Up to 100 document analyses',
+      'Unlimited conflict reports',
+      'Priority support',
       'API access',
     ],
     cta: 'Choose Plan',
@@ -45,7 +47,7 @@ const plans = [
       'Unlimited document analyses',
       'Advanced compliance monitoring',
       'Dedicated account manager',
-      'On-premise deployment option',
+      'On-premise deployment options',
     ],
     cta: 'Contact Sales',
   },
@@ -59,8 +61,13 @@ export default function BillingPage() {
           Flexible Pricing for Every Team
         </h1>
         <p className="mt-2 text-lg text-muted-foreground">
-          Pay-per-use or subscribe. The choice is yours.
+          Choose a plan that works for you.
         </p>
+        <div className="flex items-center justify-center space-x-2 mt-4">
+          <Label htmlFor="billing-toggle">Bill per Report</Label>
+          <Switch id="billing-toggle" />
+          <Label htmlFor="billing-toggle">Bill per Document</Label>
+        </div>
       </div>
 
       <div className="grid max-w-5xl mx-auto gap-8 md:grid-cols-2 lg:grid-cols-3">
@@ -68,7 +75,7 @@ export default function BillingPage() {
           <Card
             key={plan.name}
             className={`flex flex-col ${
-              plan.popular ? 'border-primary ring-2 ring-primary' : ''
+              plan.popular ? 'border-primary ring-2 ring-primary glass-effect' : ''
             }`}
           >
             <CardHeader className="relative">
@@ -115,15 +122,21 @@ export default function BillingPage() {
         <CardHeader>
           <CardTitle>Usage this month</CardTitle>
           <CardDescription>
-            Your current usage based on your plan.
+            Your current usage based on your subscription.
           </CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2">
+        <CardContent className="grid gap-4 sm:grid-cols-3">
           <div>
             <p className="text-sm font-medium text-muted-foreground">
               Documents Analyzed
             </p>
-            <p className="text-2xl font-bold">27 / 50</p>
+            <p className="text-2xl font-bold">78 / 100</p>
+          </div>
+          <div>
+            <p className="text-sm font-medium text-muted-foreground">
+              Reports Generated
+            </p>
+            <p className="text-2xl font-bold">24</p>
           </div>
           <div>
             <p className="text-sm font-medium text-muted-foreground">

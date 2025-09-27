@@ -33,11 +33,17 @@ const prompt = ai.definePrompt({
   name: 'detectDocumentConflictsPrompt',
   input: {schema: DetectDocumentConflictsInputSchema},
   output: {schema: DetectDocumentConflictsOutputSchema},
-  prompt: `You are an AI expert in legal document analysis. Your task is to analyze a set of documents and identify any contradictions, overlaps, and ambiguities.
+  prompt: `You are an AI expert in legal and policy document analysis. Your task is to analyze a set of documents and identify any contradictions, overlaps, and ambiguities.
 
-You should incorporate clauses from similar document excerpts, external laws, compliance guides, and related rulings to provide a comprehensive conflict detection.
+For each conflict you find, you must:
+1.  Clearly state the contradiction or overlap.
+2.  Provide the exact conflicting text from each document, citing the document name.
+3.  Explain WHY it is a conflict.
+4.  Suggest a concrete clarification or a resolution to fix the conflict.
 
-Generate a detailed report highlighting identified conflicts, ambiguities, and suggested clarifications.
+You should also consider external laws, compliance guides, and related rulings to provide a comprehensive analysis.
+
+Generate a detailed report in Markdown format that is well-structured and easy to read.
 
 Here are the documents to analyze:
 
