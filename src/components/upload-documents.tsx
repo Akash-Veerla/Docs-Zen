@@ -146,7 +146,7 @@ export function UploadDocuments() {
                     and drop
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    TXT, MD, etc. (up to 10MB each)
+                    DOCX, PPTX, PDF, TXT, etc. (up to 10MB each)
                   </p>
                 </div>
                 <Input
@@ -156,6 +156,7 @@ export function UploadDocuments() {
                   type="file"
                   className="hidden"
                   multiple
+                  accept=".txt,.md,.docx,.pptx,.pdf"
                   onChange={(e) => handleFiles(e.target.files)}
                 />
               </label>

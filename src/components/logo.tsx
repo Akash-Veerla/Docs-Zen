@@ -1,6 +1,6 @@
 export function Logo() {
   return (
-    <div className="flex items-center gap-3" aria-label="DocuClarity Logo">
+    <div className="flex items-center gap-3" aria-label="Docs Zen Logo">
       <svg
         width="28"
         height="28"
@@ -34,7 +34,7 @@ export function Logo() {
       </svg>
 
       <span className="font-headline text-xl font-bold tracking-tight text-foreground">
-        DocuClarity
+        Docs Zen
       </span>
     </div>
   );

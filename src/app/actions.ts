@@ -1,12 +1,45 @@
 'use server';
 
 import { detectDocumentConflicts } from '@/ai/flows/ai-detect-document-conflicts';
+import mammoth from 'mammoth';
+import pdf from 'pdf-parse';
+import PptxGenJS from 'pptxgenjs';
 
 type State = {
   report: string | null;
   error: string | null;
   key: number;
 };
+
+async function extractText(file: File): Promise<string | null> {
+  const arrayBuffer = await file.arrayBuffer();
+  if (file.type === 'application/pdf') {
+    const data = await pdf(Buffer.from(arrayBuffer));
+    return data.text;
+  }
+  if (
+    file.type ===
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  ) {
+    const { value } = await mammoth.extractRawText({
+      arrayBuffer,
+    });
+    return value;
+  }
+  if (
+    file.type ===
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+  ) {
+    const pptx = new PptxGenJS();
+    const data = await pptx.load(arrayBuffer as ArrayBuffer);
+    return data.slides
+      .map((slide) =>
+        slide.spres.map((shape) => shape.data.map((item) => item.text).join(' ')).join(' ')
+      )
+      .join(' ');
+  }
+  return file.text();
+}
 
 export async function analyzeDocuments(
   prevState: State,
@@ -27,21 +60,18 @@ export async function analyzeDocuments(
     };
   }
 
-  // As we can't easily parse PDF/DOCX content on server without extra libs,
-  // we'll simulate by reading file content as text.
-  // In a real app, you would use libraries like pdf-parse, mammoth.js
   try {
     const documentContents = await Promise.all(
       documents.map(async (doc) => {
         if (doc.size === 0) return null;
         return {
           filename: doc.name,
-          content: await doc.text(),
+          content: await extractText(doc),
         };
       })
     );
     
-    const validDocuments = documentContents.filter(doc => doc && doc.content.trim() !== '');
+    const validDocuments = documentContents.filter(doc => doc && doc.content && doc.content.trim() !== '');
 
     if (validDocuments.length < 2) {
       return { report: null, error: "At least two documents must have content to be analyzed.", key };
@@ -63,7 +93,7 @@ export async function analyzeDocuments(
     return {
       report: null,
       error:
-        'Failed to process documents. Please ensure they are valid text-based files (e.g., .txt, .md). PDF and Word documents are not fully supported in this demo.',
+        `Failed to process documents. Error: ${e.message}`,
       key,
     };
   }
