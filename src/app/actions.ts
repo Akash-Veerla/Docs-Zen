@@ -2,7 +2,7 @@
 
 import { detectDocumentConflicts } from '@/ai/flows/ai-detect-document-conflicts';
 import mammoth from 'mammoth';
-import pdf from 'pdf-parse';
+import pdf from 'pdf-parse/lib/pdf-parse.js';
 import PptxGenJS from 'pptxgenjs';
 
 type State = {
