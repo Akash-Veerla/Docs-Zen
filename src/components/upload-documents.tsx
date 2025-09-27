@@ -9,6 +9,8 @@ import {
   LoaderCircle,
   CheckCircle,
   AlertTriangle,
+  FilePlus,
+  Trash2
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
@@ -33,6 +35,7 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { Input } from './ui/input';
+import { Textarea } from './ui/textarea';
 
 const initialState: {
   report: Report | null;
@@ -43,6 +46,13 @@ const initialState: {
   error: null,
   key: 0,
 };
+
+type TextFile = {
+  id: string;
+  name: string;
+  content: string;
+  isEditing?: boolean;
+}
 
 function SubmitButton({ hasFiles }: { hasFiles: boolean }) {
   const { pending } = useFormStatus();
@@ -62,6 +72,7 @@ function SubmitButton({ hasFiles }: { hasFiles: boolean }) {
 
 export function UploadDocuments() {
   const [files, setFiles] = useState<File[]>([]);
+  const [textFiles, setTextFiles] = useState<TextFile[]>([]);
   const [dragActive, setDragActive] = useState(false);
   const [state, formAction] = useActionState(analyzeDocuments, initialState);
   const [isResultOpen, setIsResultOpen] = useState(false);
@@ -105,16 +116,47 @@ export function UploadDocuments() {
   };
 
   const removeFile = (index: number) => {
-    const newFiles = files.filter((_, i) => i !== index);
-    setFiles(newFiles);
+    setFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+  
+  const removeTextFile = (id: string) => {
+    setTextFiles((prev) => prev.filter((tf) => tf.id !== id));
+  }
+
+  const addTextFile = () => {
+    const newId = `text-file-${Date.now()}`;
+    setTextFiles(prev => [...prev, { id: newId, name: `new-document-${prev.length + 1}.txt`, content: '', isEditing: true }]);
+  };
+  
+  const updateTextFile = (id: string, newContent: Partial<TextFile>) => {
+    setTextFiles(prev => prev.map(tf => tf.id === id ? { ...tf, ...newContent } : tf));
+  };
+
+  const customSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
     
-    // This is a bit of a hack to update the underlying file input
+    // Append programmatically managed files
+    files.forEach(file => {
+      formData.append('documents', file);
+    });
+    
+    // Append text files as File objects
+    textFiles.forEach(textFile => {
+      const file = new File([textFile.content], textFile.name, { type: 'text/plain' });
+      formData.append('documents', file);
+    });
+
+    formAction(formData);
+  };
+
+  useEffect(() => {
     if (fileInputRef.current) {
       const dataTransfer = new DataTransfer();
-      newFiles.forEach(file => dataTransfer.items.add(file));
+      files.forEach(file => dataTransfer.items.add(file));
       fileInputRef.current.files = dataTransfer.files;
     }
-  };
+  }, [files]);
 
   useEffect(() => {
     if (state.key > 0) {
@@ -127,6 +169,7 @@ export function UploadDocuments() {
         });
         formRef.current?.reset();
         setFiles([]);
+        setTextFiles([]);
       }
     }
   }, [state, toast, router]);
@@ -140,11 +183,11 @@ export function UploadDocuments() {
         <CardHeader>
           <CardTitle>Start New Analysis</CardTitle>
           <CardDescription>
-            Upload two or more documents to find contradictions and overlaps.
+            Upload two or more documents to find contradictions and overlaps, or create them here.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form ref={formRef} action={formAction} className="space-y-6">
+          <form ref={formRef} onSubmit={customSubmit} className="space-y-6">
             <div className="space-y-4">
               <label
                 htmlFor="dropzone-file"
@@ -153,12 +196,12 @@ export function UploadDocuments() {
                 onDragOver={handleDrag}
                 onDrop={handleDrop}
                 className={cn(
-                  'flex flex-col items-center justify-center w-full h-64 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-secondary transition-colors',
+                  'flex flex-col items-center justify-center w-full h-48 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-secondary transition-colors',
                   dragActive ? 'border-primary' : 'border-border'
                 )}
               >
                 <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                  <Upload className="w-10 h-10 mb-3 text-muted-foreground" />
+                  <Upload className="w-8 h-8 mb-3 text-muted-foreground" />
                   <p className="mb-2 text-sm text-muted-foreground">
                     <span className="font-semibold">Click to upload</span> or drag
                     and drop
@@ -169,7 +212,6 @@ export function UploadDocuments() {
                 </div>
                 <Input
                   id="dropzone-file"
-                  ref={fileInputRef}
                   name="documents"
                   type="file"
                   className="hidden"
@@ -179,38 +221,81 @@ export function UploadDocuments() {
                 />
               </label>
 
-              {files.length > 0 && (
+              {(files.length > 0 || textFiles.length > 0) && (
                 <div className="space-y-2">
-                  <h3 className="font-medium">Selected Files:</h3>
-                  <ul className="space-y-2 max-h-48 overflow-y-auto pr-2">
-                    {files.map((file, index) => (
-                      <li
-                        key={`${file.name}-${file.lastModified}`}
-                        className="flex items-center justify-between p-2 rounded-md bg-secondary animate-in fade-in-50"
-                      >
-                        <div className="flex items-center gap-2 overflow-hidden">
-                          <FileIcon className="h-5 w-5 text-primary flex-shrink-0" />
-                          <span className="text-sm font-medium truncate" title={file.name}>{file.name}</span>
-                          <span className="text-xs text-muted-foreground flex-shrink-0">
-                            ({(file.size / 1024 / 1024).toFixed(2)} MB)
-                          </span>
-                        </div>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => removeFile(index)}
+                  <h3 className="font-medium">Documents for Analysis:</h3>
+                  <ScrollArea className="max-h-64 pr-2">
+                    <ul className="space-y-2">
+                      {files.map((file, index) => (
+                        <li
+                          key={`${file.name}-${file.lastModified}-${index}`}
+                          className="flex items-center justify-between p-2 rounded-md bg-secondary animate-in fade-in-50"
                         >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </li>
-                    ))}
-                  </ul>
+                          <div className="flex items-center gap-2 overflow-hidden">
+                            <FileIcon className="h-5 w-5 text-primary flex-shrink-0" />
+                            <span className="text-sm font-medium truncate" title={file.name}>{file.name}</span>
+                            <span className="text-xs text-muted-foreground flex-shrink-0">
+                              ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                            </span>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removeFile(index)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </li>
+                      ))}
+                      {textFiles.map((textFile) => (
+                        <li key={textFile.id} className="p-2 rounded-md bg-secondary animate-in fade-in-50 space-y-2">
+                          <div className="flex items-center justify-between">
+                             <div className="flex items-center gap-2 flex-grow overflow-hidden">
+                                <FileIcon className="h-5 w-5 text-primary flex-shrink-0" />
+                                {textFile.isEditing ? (
+                                  <Input 
+                                    value={textFile.name}
+                                    onChange={(e) => updateTextFile(textFile.id, { name: e.target.value })}
+                                    onBlur={() => updateTextFile(textFile.id, { isEditing: false })}
+                                    className="h-8 text-sm"
+                                    autoFocus
+                                  />
+                                ) : (
+                                  <span className="text-sm font-medium truncate cursor-pointer" onClick={() => updateTextFile(textFile.id, { isEditing: true })} title={textFile.name}>
+                                    {textFile.name}
+                                  </span>
+                                )}
+                             </div>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => removeTextFile(textFile.id)}
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                          </div>
+                          <Textarea 
+                            placeholder="Enter document content here..."
+                            value={textFile.content}
+                            onChange={(e) => updateTextFile(textFile.id, { content: e.target.value })}
+                            className="w-full font-code"
+                            rows={5}
+                          />
+                        </li>
+                      ))}
+                    </ul>
+                  </ScrollArea>
                 </div>
               )}
             </div>
-            <div className="flex justify-end">
-              <SubmitButton hasFiles={files.length > 0} />
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <Button type="button" variant="outline" onClick={addTextFile}>
+                <FilePlus className="mr-2 h-4 w-4" />
+                Add Text File
+              </Button>
+              <SubmitButton hasFiles={files.length + textFiles.length > 0} />
             </div>
           </form>
         </CardContent>

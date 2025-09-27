@@ -26,7 +26,6 @@ const reportsStore: Report[] = [];
 function countConflicts(reportContent: string): number {
   const conflictKeywords = ['conflict', 'contradiction', 'ambiguity', 'discrepancy', 'overlap'];
   const content = reportContent.toLowerCase();
-  let count = 0;
   
   // A simple way to count is to check for occurrences of keywords.
   // This could be improved with more sophisticated NLP.
@@ -72,12 +71,10 @@ export async function analyzeDocuments(
   formData: FormData
 ): Promise<State> {
   const key = prevState.key + 1;
-  const documents = formData.getAll('documents') as File[];
-
-  if (documents.length === 0) {
-    return { report: null, error: 'Please upload at least one document.', key };
-  }
+  const uploadedFiles = formData.getAll('documents') as File[];
   
+  const documents = uploadedFiles.filter(file => file.size > 0);
+
   if (documents.length < 2) {
     return {
       report: null,
@@ -89,7 +86,6 @@ export async function analyzeDocuments(
   try {
     const documentContents = await Promise.all(
       documents.map(async (doc) => {
-        if (doc.size === 0) return null;
         return {
           filename: doc.name,
           content: await extractText(doc),
