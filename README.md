@@ -1,19 +1,34 @@
-# Document Conflict Detector
+# Docs Zen - Document Conflict Detector
 
-This is a Next.js application that uses AI to analyze documents for conflicts, overlaps, and ambiguities. It supports DOCX, PDF, PPTX, and text files.
+A pure Client-Side React Application to analyze documents for conflicts using Google Gemini AI.
 
 ## Features
 
-- **Document Analysis**: Upload multiple documents to identify contradictions and consistencies.
-- **AI-Powered**: Uses Google's Gemini 1.5 Flash model for deep analysis.
-- **Support for Multiple Formats**: Works with `.docx`, `.pdf`, `.pptx`, `.md`, and `.txt`.
+- **Document Analysis**: Upload multiple documents (PDF, DOCX, PPTX, MD, TXT) to identify contradictions.
+- **Client-Side Processing**: All file extraction and AI calls happen directly in your browser. No files are uploaded to our server.
+- **Secure**: Your API Key is used only for the current session and never stored.
+- **Format Support**:
+    -   Word (.docx)
+    -   PowerPoint (.pptx)
+    -   PDF (.pdf)
+    -   Markdown/Text
+
+## Tech Stack
+
+-   **Framework**: React + Vite
+-   **AI**: Google Generative AI SDK (Gemini 1.5 Flash)
+-   **UI**: Tailwind CSS, Shadcn UI, Lucide React
+-   **File Parsing**:
+    -   `mammoth` (DOCX)
+    -   `pdfjs-dist` (PDF)
+    -   `jszip` (PPTX)
 
 ## Getting Started
 
 ### Prerequisites
 
 - Node.js installed.
-- A Google AI API key (for Gemini).
+- A Google Gemini API Key.
 
 ### Installation
 
@@ -24,34 +39,26 @@ This is a Next.js application that uses AI to analyze documents for conflicts, o
     npm install
     ```
 
-3.  Create a `.env` file in the root directory and add your Google AI API key:
+### Running Locally
+
+1.  Create a `.env` file in the root directory (optional, but convenient for dev):
 
     ```env
-    GOOGLE_GENAI_API_KEY=your_api_key_here
+    VITE_GOOGLE_GENAI_API_KEY=your_api_key_here
     ```
 
-### Running the App
+2.  Start the development server:
 
-Run the development server:
+    ```bash
+    npm run dev
+    ```
+
+3.  Open [http://localhost:5173](http://localhost:5173).
+
+### Building for Production
 
 ```bash
-npm run dev
+npm run build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-The dashboard is located at [http://localhost:3000/dashboard](http://localhost:3000/dashboard).
-
-## Usage
-
-1.  Navigate to the Dashboard.
-2.  Click "Start New Analysis" or drag and drop files.
-3.  Upload at least two documents.
-4.  Click "Analyze Documents".
-5.  View the generated report highlighting any conflicts found.
-
-## Tech Stack
-
--   **Framework**: Next.js 15
--   **AI**: Genkit + Google AI (Gemini 1.5 Flash)
--   **UI**: Tailwind CSS, Radix UI, Lucide React
--   **File Processing**: Mammoth (DOCX), PDF-Parse (PDF), JSZip (PPTX)
+The output will be in the `dist/` directory, ready to be deployed to any static host (Netlify, Vercel, GitHub Pages).
