@@ -6,7 +6,8 @@ import {
   LoaderCircle,
   CheckCircle,
   AlertTriangle,
-  Key
+  Key,
+  Bot
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -31,7 +32,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { extractText } from '@/lib/file-processing';
-import { analyzeDocuments, Report } from '@/lib/ai';
+import { analyzeDocuments, analyzeWithChromeAI, checkChromeAIAvailability, Report } from '@/lib/ai';
+import { Badge } from '@/components/ui/badge';
 
 export function UploadDocuments() {
   const [files, setFiles] = useState<File[]>([]);
@@ -41,12 +43,22 @@ export function UploadDocuments() {
   const [error, setError] = useState<string | null>(null);
   const [isResultOpen, setIsResultOpen] = useState(false);
   const [apiKey, setApiKey] = useState('');
+  const [chromeAIAvailable, setChromeAIAvailable] = useState(false);
+  const [useLocalAI, setUseLocalAI] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
-  // Load API Key from env if available
   useEffect(() => {
+    // Check Chrome AI Availability
+    checkChromeAIAvailability().then((available) => {
+      setChromeAIAvailable(available);
+      if (available) {
+        setUseLocalAI(true);
+      }
+    });
+
+    // Load API Key from env if available
     if (import.meta.env.VITE_GOOGLE_GENAI_API_KEY) {
       setApiKey(import.meta.env.VITE_GOOGLE_GENAI_API_KEY);
     }
@@ -110,11 +122,12 @@ export function UploadDocuments() {
       });
       return;
     }
-    if (!apiKey) {
+
+    if (!useLocalAI && !apiKey) {
       toast({
         variant: 'destructive',
         title: 'Missing API Key',
-        description: 'Please provide a Google Gemini API Key.',
+        description: 'Please provide a Google Gemini API Key or enable Chrome AI.',
       });
       return;
     }
@@ -139,12 +152,18 @@ export function UploadDocuments() {
       }
 
       // 2. Analyze
-      const result = await analyzeDocuments(validDocs, apiKey);
+      let result: Report;
+      if (useLocalAI && chromeAIAvailable) {
+         result = await analyzeWithChromeAI(validDocs);
+      } else {
+         result = await analyzeDocuments(validDocs, apiKey);
+      }
+
       setReport(result);
       setIsResultOpen(true);
       toast({
         title: 'Analysis Complete!',
-        description: `Report generated successfully.`,
+        description: `Report generated successfully using ${useLocalAI ? 'Chrome AI' : 'Gemini API'}.`,
       });
       setFiles([]); // Clear files after success
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -168,33 +187,51 @@ export function UploadDocuments() {
     <>
       <Card>
         <CardHeader>
-          <CardTitle>Start New Analysis</CardTitle>
-          <CardDescription>
-            Upload two or more documents to find contradictions and overlaps.
-          </CardDescription>
+          <div className="flex justify-between items-start">
+             <div>
+                <CardTitle>Start New Analysis</CardTitle>
+                <CardDescription>
+                    Upload two or more documents to find contradictions and overlaps.
+                </CardDescription>
+             </div>
+             {chromeAIAvailable && (
+                <Badge variant={useLocalAI ? "default" : "secondary"} className="cursor-pointer" onClick={() => setUseLocalAI(!useLocalAI)}>
+                    {useLocalAI ? "Using Chrome AI (Local)" : "Switch to Local AI"}
+                </Badge>
+             )}
+          </div>
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-6">
-             <div className="space-y-2">
-                <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70" htmlFor="api-key">
-                    Google Gemini API Key
-                </label>
-                <div className="relative">
-                    <Key className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input
-                        id="api-key"
-                        type="password"
-                        placeholder="Enter your API Key"
-                        className="pl-9"
-                        value={apiKey}
-                        onChange={(e) => setApiKey(e.target.value)}
-                        required
-                    />
+             {!useLocalAI && (
+                <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
+                    <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70" htmlFor="api-key">
+                        Google Gemini API Key
+                    </label>
+                    <div className="relative">
+                        <Key className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            id="api-key"
+                            type="password"
+                            placeholder="Enter your API Key"
+                            className="pl-9"
+                            value={apiKey}
+                            onChange={(e) => setApiKey(e.target.value)}
+                            required={!useLocalAI}
+                        />
+                    </div>
+                    <p className="text-[0.8rem] text-muted-foreground">
+                        Your key is used only for this session and is not stored.
+                    </p>
                 </div>
-                 <p className="text-[0.8rem] text-muted-foreground">
-                    Your key is used only for this session and is not stored.
-                </p>
-            </div>
+            )}
+
+            {useLocalAI && (
+                 <div className="p-4 bg-secondary/50 rounded-lg flex items-center gap-3 text-sm text-muted-foreground animate-in fade-in slide-in-from-top-2">
+                    <Bot className="h-5 w-5 text-primary" />
+                    <p>Using Chrome's built-in AI model. No data leaves your device.</p>
+                 </div>
+            )}
 
             <div
               onDragEnter={handleDrag}
@@ -264,7 +301,7 @@ export function UploadDocuments() {
             )}
           </CardContent>
           <CardFooter className="border-t pt-6">
-            <Button type="submit" disabled={isProcessing || files.length < 2 || !apiKey}>
+            <Button type="submit" disabled={isProcessing || files.length < 2 || (!useLocalAI && !apiKey)}>
                 {isProcessing ? (
                     <>
                     <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />

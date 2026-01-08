@@ -55,6 +55,18 @@ A pure Client-Side React Application to analyze documents for conflicts using Go
 
 3.  Open [http://localhost:5173](http://localhost:5173).
 
+### Using Chrome Built-in AI (Free & Local)
+
+This application supports Chrome's experimental built-in AI (Gemini Nano). To use it without an API key:
+
+1.  Use **Chrome Canary** or **Chrome Dev** (version 127+).
+2.  Enable the following flags in `chrome://flags`:
+    *   `Enables optimization guide on device`: **Enabled BypassPerfRequirement**
+    *   `Prompt API for Gemini Nano`: **Enabled**
+3.  Restart Chrome.
+4.  Go to `chrome://components` and check for **Optimization Guide On Device Model**. If it says "Status - Component not updated", click **Check for update** to download the model.
+5.  Open the app. You should see a "Switch to Local AI" option or "Using Chrome AI" badge.
+
 ### Building for Production
 
 ```bash
