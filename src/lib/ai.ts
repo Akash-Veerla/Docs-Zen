@@ -16,21 +16,21 @@ export async function analyzeDocuments(
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
-  const prompt = `You are an AI expert in legal and policy document analysis. Your task is to analyze a set of documents and identify any contradictions, overlaps, and ambiguities.
+  const prompt = `You are an AI expert in document analysis and conflict resolution. Your goal is to identify conflicts between the provided documents and suggest specific changes to resolve them.
 
-For each conflict you find, you must:
-1.  Clearly state the contradiction or overlap.
-2.  Provide the exact conflicting text from each document, citing the document name.
-3.  Explain WHY it is a conflict.
-4.  Suggest a concrete clarification or a resolution to fix the conflict.
+Please perform the following for each conflict or ambiguity found:
+1.  **Conflict Identification**: Clearly describe the contradiction or overlap.
+2.  **Source Text**: Quote the conflicting text from each document, citing the document name.
+3.  **Explanation**: Briefly explain why this is a conflict.
+4.  **Suggested Changes**: Provide specific, actionable suggestions for how to edit the documents to resolve the conflict. Be precise (e.g., "Replace text X with Y").
 
-You should also consider external laws, compliance guides, and related rulings to provide a comprehensive analysis.
+If no conflicts are found, please state that the documents appear consistent.
 
-Generate a detailed report in Markdown format that is well-structured and easy to read.
+Generate a clean, easy-to-read report in Markdown.
 
-Here are the documents to analyze:
+Documents to analyze:
 
-${documents.map(d => `Document Name: ${d.filename}\nContent:\n${d.content}\n\n---\n`).join('')}`;
+${documents.map(d => `### Document: ${d.filename}\n${d.content}\n\n---\n`).join('')}`;
 
   try {
     const result = await model.generateContent(prompt);

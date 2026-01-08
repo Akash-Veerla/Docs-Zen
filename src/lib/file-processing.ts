@@ -3,7 +3,7 @@ import JSZip from 'jszip';
 import * as pdfjsLib from 'pdfjs-dist';
 
 // Configure PDF.js worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.js`;
+pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 
 export async function extractText(file: File): Promise<string | null> {
   try {
@@ -16,7 +16,10 @@ export async function extractText(file: File): Promise<string | null> {
       for (let i = 1; i <= pdf.numPages; i++) {
         const page = await pdf.getPage(i);
         const textContent = await page.getTextContent();
-        const pageText = textContent.items.map((item: { str: string } & object) => item.str).join(' ');
+        const pageText = textContent.items
+          .filter((item: unknown) => typeof item === 'object' && item !== null && 'str' in item)
+          .map((item: unknown) => (item as { str: string }).str)
+          .join(' ');
         fullText += pageText + '\n';
       }
       return fullText;
