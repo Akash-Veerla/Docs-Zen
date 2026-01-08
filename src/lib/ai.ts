@@ -9,14 +9,25 @@ export type Report = {
   reportContent: string;
 };
 
-export async function analyzeDocuments(
-  documents: { filename: string; content: string }[],
-  apiKey: string
-): Promise<Report> {
-  const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+function countConflicts(text: string): number {
+  const conflictKeywords = ['conflict', 'contradiction', 'ambiguity', 'discrepancy', 'overlap'];
+  const content = text.toLowerCase();
+  const matches = content.match(new RegExp(conflictKeywords.join('|'), 'gi'));
+  return matches ? matches.length : 0;
+}
 
-  const prompt = `You are an AI expert in document analysis and conflict resolution. Your goal is to identify conflicts between the provided documents and suggest specific changes to resolve them.
+function generateReportObject(text: string, fileCount: number): Report {
+  return {
+    id: `REP-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`,
+    date: new Date().toISOString().split('T')[0],
+    files: fileCount,
+    conflicts: countConflicts(text),
+    status: 'Completed',
+    reportContent: text,
+  };
+}
+
+const SYSTEM_PROMPT = `You are an AI expert in document analysis and conflict resolution. Your goal is to identify conflicts between the provided documents and suggest specific changes to resolve them.
 
 Please perform the following for each conflict or ambiguity found:
 1.  **Conflict Identification**: Clearly describe the contradiction or overlap.
@@ -26,30 +37,66 @@ Please perform the following for each conflict or ambiguity found:
 
 If no conflicts are found, please state that the documents appear consistent.
 
-Generate a clean, easy-to-read report in Markdown.
+Generate a clean, easy-to-read report in Markdown.`;
 
-Documents to analyze:
+function buildPrompt(documents: { filename: string; content: string }[]): string {
+  return `Documents to analyze:
 
 ${documents.map(d => `### Document: ${d.filename}\n${d.content}\n\n---\n`).join('')}`;
+}
+
+export async function checkChromeAIAvailability(): Promise<boolean> {
+  if (typeof window === 'undefined' || !window.ai || !window.ai.languageModel) {
+    return false;
+  }
+  try {
+    const capabilities = await window.ai.languageModel.capabilities();
+    return capabilities.available !== 'no';
+  } catch (e) {
+    console.warn('Error checking Chrome AI capabilities:', e);
+    return false;
+  }
+}
+
+export async function analyzeWithChromeAI(
+  documents: { filename: string; content: string }[]
+): Promise<Report> {
+  if (!window.ai || !window.ai.languageModel) {
+    throw new Error('Chrome AI is not available.');
+  }
+
+  const session = await window.ai.languageModel.create({
+    systemPrompt: SYSTEM_PROMPT,
+  });
+
+  try {
+    const prompt = buildPrompt(documents);
+    const text = await session.prompt(prompt);
+
+    return generateReportObject(text, documents.length);
+  } catch (error: unknown) {
+    console.error("Chrome AI Analysis Error:", error);
+    throw new Error("Failed to analyze documents with Chrome AI. The content might be too large for the local model.");
+  } finally {
+    session.destroy();
+  }
+}
+
+export async function analyzeDocuments(
+  documents: { filename: string; content: string }[],
+  apiKey: string
+): Promise<Report> {
+  const genAI = new GoogleGenerativeAI(apiKey);
+  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+
+  const prompt = `${SYSTEM_PROMPT}\n\n${buildPrompt(documents)}`;
 
   try {
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const text = response.text();
 
-    const conflictKeywords = ['conflict', 'contradiction', 'ambiguity', 'discrepancy', 'overlap'];
-    const content = text.toLowerCase();
-    const matches = content.match(new RegExp(conflictKeywords.join('|'), 'gi'));
-    const conflictsCount = matches ? matches.length : 0;
-
-    return {
-      id: `REP-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`,
-      date: new Date().toISOString().split('T')[0],
-      files: documents.length,
-      conflicts: conflictsCount,
-      status: 'Completed',
-      reportContent: text,
-    };
+    return generateReportObject(text, documents.length);
   } catch (error: unknown) {
     console.error("AI Analysis Error:", error);
     if (error instanceof Error) {
