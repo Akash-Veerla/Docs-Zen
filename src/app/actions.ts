@@ -3,7 +3,7 @@
 import { detectDocumentConflicts } from '@/ai/flows/ai-detect-document-conflicts';
 import mammoth from 'mammoth';
 import pdfParse from 'pdf-parse/lib/pdf-parse.js';
-import PptxGenJS from 'pptxgenjs';
+import JSZip from 'jszip';
 
 export type Report = {
   id: string;
@@ -53,18 +53,36 @@ async function extractText(file: File): Promise<string | null> {
       file.type ===
       'application/vnd.openxmlformats-officedocument.presentationml.presentation'
     ) {
-      const pptx = new PptxGenJS();
-      const data = await pptx.load(arrayBuffer as ArrayBuffer);
+      const zip = new JSZip();
+      await zip.loadAsync(arrayBuffer);
       let fullText = '';
-      if(data.slides) {
-        for (const slide of data.slides) {
-            if(slide.objects) {
-              slide.objects.forEach((object) => {
-                if ('text' in object && object.text?.text) {
-                  fullText += object.text.text + ' ';
-                }
-              });
-            }
+
+      // Find all slide XML files
+      const slideFiles = Object.keys(zip.files).filter((fileName) =>
+        fileName.match(/ppt\/slides\/slide\d+\.xml/)
+      );
+
+      // Sort slides to maintain order (though numbers might not strictly correspond to presentation order, it's a good approximation)
+      slideFiles.sort((a, b) => {
+        const numA = parseInt(a.match(/slide(\d+)\.xml/)![1]);
+        const numB = parseInt(b.match(/slide(\d+)\.xml/)![1]);
+        return numA - numB;
+      });
+
+      for (const slideFile of slideFiles) {
+        const slideXml = await zip.file(slideFile)?.async('string');
+        if (slideXml) {
+          // Extract text from XML using regex.
+          // Text in PPTX is usually in <a:t> tags.
+          const textMatches = slideXml.match(/<a:t[^>]*>(.*?)<\/a:t>/g);
+          if (textMatches) {
+            textMatches.forEach((match) => {
+              // Remove tags to get pure text
+              const text = match.replace(/<\/?a:t[^>]*>/g, '');
+              fullText += text + ' ';
+            });
+            fullText += '\n'; // Add newline between slides
+          }
         }
       }
       return fullText;

@@ -76,7 +76,11 @@ export default function SettingsPage() {
   }
 
   async function onNotificationsSubmit(data: NotificationsFormValues) {
-    const result = await updateNotificationSettings(data);
+    const result = await updateNotificationSettings({
+      communication: data.communication ?? false,
+      marketing: data.marketing ?? false,
+      security: data.security ?? false,
+    });
     toast({
       title: result.success ? 'Success!' : 'Error',
       description: result.message,
