@@ -1,13 +1,12 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import {
   Upload,
   File as FileIcon,
   X,
   LoaderCircle,
-  CheckCircle,
-  AlertTriangle,
-  Key,
-  Bot
+  ArrowRight,
+  GitCompare,
+  AlertTriangle
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -32,37 +31,76 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { extractText } from '@/lib/file-processing';
-import { analyzeDocuments, analyzeWithChromeAI, checkChromeAIAvailability, Report } from '@/lib/ai';
+import { detectConflicts, ComparisonReport, ConflictItem, UniqueItem } from '@/lib/comparator';
 import { Badge } from '@/components/ui/badge';
+
+function DiffView({ conflicts }: { conflicts: ConflictItem[] }) {
+  if (conflicts.length === 0) return <p className="text-muted-foreground italic">No conflicts found.</p>;
+
+  return (
+    <div className="space-y-6">
+      {conflicts.map((conflict, idx) => (
+        <div key={idx} className="border rounded-md p-4 bg-background">
+          <div className="flex items-center justify-between mb-2">
+            <Badge variant="outline" className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20">
+              Similarity: {(conflict.score * 100).toFixed(0)}%
+            </Badge>
+          </div>
+          <div className="space-y-3 font-mono text-sm">
+             <div className="bg-red-500/10 p-2 rounded border border-red-500/20">
+                <span className="font-bold text-red-500 block mb-1">Doc A:</span>
+                {conflict.source}
+             </div>
+             <div className="flex justify-center">
+                <ArrowRight className="h-4 w-4 text-muted-foreground rotate-90 md:rotate-0" />
+             </div>
+             <div className="bg-green-500/10 p-2 rounded border border-green-500/20">
+                <span className="font-bold text-green-500 block mb-1">Doc B:</span>
+                {conflict.target}
+             </div>
+             {/* Simple word diff visualization could go here */}
+             <div className="mt-2 pt-2 border-t">
+               <span className="text-xs text-muted-foreground font-sans">Detailed Diff:</span>
+               <div className="mt-1 break-words whitespace-pre-wrap">
+                 {conflict.diff.map((part, i) => (
+                   <span key={i} className={part.added ? 'bg-green-500/20 text-green-700 dark:text-green-300' : part.removed ? 'bg-red-500/20 text-red-700 dark:text-red-300 line-through' : ''}>
+                     {part.value}
+                   </span>
+                 ))}
+               </div>
+             </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function UniqueView({ items, docName }: { items: UniqueItem[], docName: string }) {
+    if (items.length === 0) return <p className="text-muted-foreground italic">No unique content.</p>;
+
+    return (
+        <ul className="space-y-2 list-disc pl-4 text-sm">
+            {items.map((item, idx) => (
+                <li key={idx} className="text-muted-foreground">
+                    {item.text}
+                </li>
+            ))}
+        </ul>
+    );
+}
 
 export function UploadDocuments() {
   const [files, setFiles] = useState<File[]>([]);
   const [dragActive, setDragActive] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [report, setReport] = useState<Report | null>(null);
+  const [report, setReport] = useState<ComparisonReport | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isResultOpen, setIsResultOpen] = useState(false);
-  const [apiKey, setApiKey] = useState('');
-  const [chromeAIAvailable, setChromeAIAvailable] = useState(false);
-  const [useLocalAI, setUseLocalAI] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
-
-  useEffect(() => {
-    // Check Chrome AI Availability
-    checkChromeAIAvailability().then((available) => {
-      setChromeAIAvailable(available);
-      if (available) {
-        setUseLocalAI(true);
-      }
-    });
-
-    // Load API Key from env if available
-    if (import.meta.env.VITE_GOOGLE_GENAI_API_KEY) {
-      setApiKey(import.meta.env.VITE_GOOGLE_GENAI_API_KEY);
-    }
-  }, []);
 
   const handleFiles = (newFiles: FileList | null) => {
     if (newFiles) {
@@ -123,15 +161,6 @@ export function UploadDocuments() {
       return;
     }
 
-    if (!useLocalAI && !apiKey) {
-      toast({
-        variant: 'destructive',
-        title: 'Missing API Key',
-        description: 'Please provide a Google Gemini API Key or enable Chrome AI.',
-      });
-      return;
-    }
-
     setIsProcessing(true);
     setError(null);
     setReport(null);
@@ -139,7 +168,7 @@ export function UploadDocuments() {
     try {
       // 1. Extract Text
       const docs = await Promise.all(
-        files.map(async (file) => ({
+        files.slice(0, 2).map(async (file) => ({
           filename: file.name,
           content: await extractText(file),
         }))
@@ -151,22 +180,15 @@ export function UploadDocuments() {
         throw new Error("Could not extract text from enough documents. Files may be empty or unsupported.");
       }
 
-      // 2. Analyze
-      let result: Report;
-      if (useLocalAI && chromeAIAvailable) {
-         result = await analyzeWithChromeAI(validDocs);
-      } else {
-         result = await analyzeDocuments(validDocs, apiKey);
-      }
+      // 2. Compare
+      const result = detectConflicts(validDocs[0].content, validDocs[1].content);
 
       setReport(result);
       setIsResultOpen(true);
       toast({
-        title: 'Analysis Complete!',
-        description: `Report generated successfully using ${useLocalAI ? 'Chrome AI' : 'Gemini API'}.`,
+        title: 'Comparison Complete!',
+        description: `Compared ${validDocs[0].filename} and ${validDocs[1].filename}.`,
       });
-      setFiles([]); // Clear files after success
-      if (fileInputRef.current) fileInputRef.current.value = "";
 
     } catch (err: unknown) {
       console.error(err);
@@ -187,52 +209,13 @@ export function UploadDocuments() {
     <>
       <Card>
         <CardHeader>
-          <div className="flex justify-between items-start">
-             <div>
-                <CardTitle>Start New Analysis</CardTitle>
-                <CardDescription>
-                    Upload two or more documents to find contradictions and overlaps.
-                </CardDescription>
-             </div>
-             {chromeAIAvailable && (
-                <Badge variant={useLocalAI ? "default" : "secondary"} className="cursor-pointer" onClick={() => setUseLocalAI(!useLocalAI)}>
-                    {useLocalAI ? "Using Chrome AI (Local)" : "Switch to Local AI"}
-                </Badge>
-             )}
-          </div>
+            <CardTitle>Compare Documents</CardTitle>
+            <CardDescription>
+                Upload two documents to find contradictions, text changes, and similarities.
+            </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-6">
-             {!useLocalAI && (
-                <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
-                    <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70" htmlFor="api-key">
-                        Google Gemini API Key
-                    </label>
-                    <div className="relative">
-                        <Key className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                        <Input
-                            id="api-key"
-                            type="password"
-                            placeholder="Enter your API Key"
-                            className="pl-9"
-                            value={apiKey}
-                            onChange={(e) => setApiKey(e.target.value)}
-                            required={!useLocalAI}
-                        />
-                    </div>
-                    <p className="text-[0.8rem] text-muted-foreground">
-                        Your key is used only for this session and is not stored.
-                    </p>
-                </div>
-            )}
-
-            {useLocalAI && (
-                 <div className="p-4 bg-secondary/50 rounded-lg flex items-center gap-3 text-sm text-muted-foreground animate-in fade-in slide-in-from-top-2">
-                    <Bot className="h-5 w-5 text-primary" />
-                    <p>Using Chrome's built-in AI model. No data leaves your device.</p>
-                 </div>
-            )}
-
             <div
               onDragEnter={handleDrag}
               onDragLeave={handleDrag}
@@ -268,7 +251,7 @@ export function UploadDocuments() {
 
             {files.length > 0 && (
               <div className="mt-4 space-y-2">
-                <h3 className="font-medium">Documents for Analysis:</h3>
+                <h3 className="font-medium">Documents (First 2 will be compared):</h3>
                 <ScrollArea className="h-60 pr-4">
                   <ul className="space-y-3">
                     {files.map((file, index) => (
@@ -301,14 +284,17 @@ export function UploadDocuments() {
             )}
           </CardContent>
           <CardFooter className="border-t pt-6">
-            <Button type="submit" disabled={isProcessing || files.length < 2 || (!useLocalAI && !apiKey)}>
+            <Button type="submit" disabled={isProcessing || files.length < 2}>
                 {isProcessing ? (
                     <>
                     <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
-                    Analyzing...
+                    Comparing...
                     </>
                 ) : (
-                    'Analyze Documents'
+                    <>
+                    <GitCompare className="mr-2 h-4 w-4" />
+                    Compare Documents
+                    </>
                 )}
             </Button>
           </CardFooter>
@@ -316,38 +302,56 @@ export function UploadDocuments() {
       </Card>
 
       <Dialog open={isResultOpen} onOpenChange={setIsResultOpen}>
-        <DialogContent className="sm:max-w-3xl h-[90vh] flex flex-col">
+        <DialogContent className="sm:max-w-4xl h-[90vh] flex flex-col">
           <DialogHeader>
-            {report && (
-              <DialogTitle className="flex items-center gap-2">
-                <CheckCircle className="h-6 w-6 text-green-500" />
-                Analysis Complete
-              </DialogTitle>
-            )}
-            {error && (
-              <DialogTitle className="flex items-center gap-2">
-                <AlertTriangle className="h-6 w-6 text-destructive" />
-                Analysis Failed
-              </DialogTitle>
-            )}
-            <DialogDescription>
-              {report
-                ? `Report ${report.id} is ready.`
-                : 'An error occurred during analysis.'}
-            </DialogDescription>
+             <DialogTitle>Comparison Results</DialogTitle>
+             <DialogDescription>
+                Analysis between {files[0]?.name} and {files[1]?.name}
+             </DialogDescription>
           </DialogHeader>
           <div className="flex-1 min-h-0">
             <ScrollArea className="h-full pr-4">
-              {report && (
-                <pre className="text-sm whitespace-pre-wrap font-code bg-secondary p-4 rounded-md">
-                  {report.reportContent}
-                </pre>
-              )}
-              {error && (
+              {report ? (
+                 <div className="space-y-8 p-1">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <Card>
+                            <CardHeader className="p-4 pb-2"><CardTitle className="text-sm">Matches</CardTitle></CardHeader>
+                            <CardContent className="p-4 pt-0 text-2xl font-bold text-green-500">{report.matchCount}</CardContent>
+                        </Card>
+                        <Card>
+                            <CardHeader className="p-4 pb-2"><CardTitle className="text-sm">Potential Conflicts</CardTitle></CardHeader>
+                            <CardContent className="p-4 pt-0 text-2xl font-bold text-yellow-500">{report.conflicts.length}</CardContent>
+                        </Card>
+                        <Card>
+                            <CardHeader className="p-4 pb-2"><CardTitle className="text-sm">Unique Sentences</CardTitle></CardHeader>
+                            <CardContent className="p-4 pt-0 text-2xl font-bold text-blue-500">{report.uniqueToA.length + report.uniqueToB.length}</CardContent>
+                        </Card>
+                    </div>
+
+                    <div>
+                        <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                             <AlertTriangle className="h-5 w-5 text-yellow-500" />
+                             Potential Conflicts & Edits
+                        </h3>
+                        <DiffView conflicts={report.conflicts} />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                             <h3 className="text-lg font-semibold mb-3 text-blue-500">Unique to {files[0]?.name}</h3>
+                             <UniqueView items={report.uniqueToA} docName={files[0]?.name} />
+                        </div>
+                        <div>
+                             <h3 className="text-lg font-semibold mb-3 text-purple-500">Unique to {files[1]?.name}</h3>
+                             <UniqueView items={report.uniqueToB} docName={files[1]?.name} />
+                        </div>
+                    </div>
+                 </div>
+              ) : error ? (
                 <div className="text-sm text-destructive bg-destructive/10 p-4 rounded-md">
                   {error}
                 </div>
-              )}
+              ) : null}
             </ScrollArea>
           </div>
           <DialogFooter>
