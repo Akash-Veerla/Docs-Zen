@@ -1,18 +1,21 @@
-# Docs Zen - Document Conflict Detector
+# Docs Zen - Document Comparator
 
-A pure Client-Side React Application to analyze and cross-reference documents for conflicts using Google Gemini AI.
+A pure Client-Side React Application to compare documents and detect text conflicts deterministically.
 
 ## Features
 
-- **Multi-Document Analysis**: Upload up to 4 documents (PDF, DOCX, PPTX, TXT) at once.
-- **AI-Powered**: Uses Google Gemini 1.5 Flash to identify contradictions, overlaps, and inconsistencies across the entire set.
-- **Client-Side Processing**: Files are parsed locally in the browser before being sent to the AI model.
-- **Privacy**: Your documents are processed in memory and not stored on any backend server.
+- **Privacy First**: All processing happens 100% in your browser. No data is sent to any server or AI model.
+- **Deterministic Comparison**: Uses diffing algorithms and sentence similarity (Dice Coefficient) to find changes, conflicts, and unique content.
+- **Format Support**:
+    -   Word (.docx)
+    -   PowerPoint (.pptx)
+    -   PDF (.pdf)
+    -   Markdown/Text
 
 ## Tech Stack
 
 -   **Framework**: React + Vite
--   **AI**: Google Generative AI SDK (Gemini 1.5 Flash)
+-   **Comparison**: `diff` library + Custom NLP logic
 -   **UI**: Tailwind CSS, Shadcn UI, Lucide React
 -   **File Parsing**:
     -   `mammoth` (DOCX)
