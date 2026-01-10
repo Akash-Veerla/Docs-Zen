@@ -4,11 +4,11 @@ import {
   File as FileIcon,
   X,
   LoaderCircle,
-  CheckCircle,
-  AlertTriangle,
+  ArrowRight,
+  GitCompare,
+  AlertTriangle
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import ReactMarkdown from 'react-markdown';
 
 import {
   Card,
@@ -31,13 +31,69 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { extractText } from '@/lib/file-processing';
-import { analyzeDocuments, Report } from '@/lib/ai';
+import { detectConflicts, ComparisonReport, ConflictItem, UniqueItem } from '@/lib/comparator';
+import { Badge } from '@/components/ui/badge';
+
+function DiffView({ conflicts }: { conflicts: ConflictItem[] }) {
+  if (conflicts.length === 0) return <p className="text-muted-foreground italic">No conflicts found.</p>;
+
+  return (
+    <div className="space-y-6">
+      {conflicts.map((conflict, idx) => (
+        <div key={idx} className="border rounded-md p-4 bg-background">
+          <div className="flex items-center justify-between mb-2">
+            <Badge variant="outline" className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20">
+              Similarity: {(conflict.score * 100).toFixed(0)}%
+            </Badge>
+          </div>
+          <div className="space-y-3 font-mono text-sm">
+             <div className="bg-red-500/10 p-2 rounded border border-red-500/20">
+                <span className="font-bold text-red-500 block mb-1">Doc A:</span>
+                {conflict.source}
+             </div>
+             <div className="flex justify-center">
+                <ArrowRight className="h-4 w-4 text-muted-foreground rotate-90 md:rotate-0" />
+             </div>
+             <div className="bg-green-500/10 p-2 rounded border border-green-500/20">
+                <span className="font-bold text-green-500 block mb-1">Doc B:</span>
+                {conflict.target}
+             </div>
+             <div className="mt-2 pt-2 border-t">
+               <span className="text-xs text-muted-foreground font-sans">Detailed Diff:</span>
+               <div className="mt-1 break-words whitespace-pre-wrap">
+                 {conflict.diff.map((part, i) => (
+                   <span key={i} className={part.added ? 'bg-green-500/20 text-green-700 dark:text-green-300' : part.removed ? 'bg-red-500/20 text-red-700 dark:text-red-300 line-through' : ''}>
+                     {part.value}
+                   </span>
+                 ))}
+               </div>
+             </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function UniqueView({ items }: { items: UniqueItem[], docName: string }) {
+    if (items.length === 0) return <p className="text-muted-foreground italic">No unique content.</p>;
+
+    return (
+        <ul className="space-y-2 list-disc pl-4 text-sm">
+            {items.map((item, idx) => (
+                <li key={idx} className="text-muted-foreground">
+                    {item.text}
+                </li>
+            ))}
+        </ul>
+    );
+}
 
 export function UploadDocuments() {
   const [files, setFiles] = useState<File[]>([]);
   const [dragActive, setDragActive] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [report, setReport] = useState<Report | null>(null);
+  const [report, setReport] = useState<ComparisonReport | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isResultOpen, setIsResultOpen] = useState(false);
 
@@ -53,17 +109,6 @@ export function UploadDocuments() {
             updatedFiles.push(file);
           }
         });
-
-        // Enforce max 4 files
-        if (updatedFiles.length > 4) {
-            toast({
-                variant: 'destructive',
-                title: 'Too many files',
-                description: 'You can only analyze up to 4 files at once.',
-            });
-            return prevFiles;
-        }
-
         if (fileInputRef.current) {
            const dataTransfer = new DataTransfer();
            updatedFiles.forEach(f => dataTransfer.items.add(f));
@@ -121,7 +166,7 @@ export function UploadDocuments() {
     try {
       // 1. Extract Text
       const docs = await Promise.all(
-        files.map(async (file) => ({
+        files.slice(0, 2).map(async (file) => ({
           filename: file.name,
           content: await extractText(file),
         }))
@@ -133,16 +178,15 @@ export function UploadDocuments() {
         throw new Error("Could not extract text from enough documents. Files may be empty or unsupported.");
       }
 
-      // 2. Analyze
-      const result = await analyzeDocuments(validDocs);
+      // 2. Compare
+      const result = detectConflicts(validDocs[0].content, validDocs[1].content);
+
       setReport(result);
       setIsResultOpen(true);
       toast({
-        title: 'Analysis Complete!',
-        description: `Successfully analyzed ${validDocs.length} documents.`,
+        title: 'Comparison Complete!',
+        description: `Compared ${validDocs[0].filename} and ${validDocs[1].filename}.`,
       });
-      setFiles([]); // Clear files after success
-      if (fileInputRef.current) fileInputRef.current.value = "";
 
     } catch (err: unknown) {
       console.error(err);
@@ -163,10 +207,10 @@ export function UploadDocuments() {
     <>
       <Card>
         <CardHeader>
-          <CardTitle>Start New Analysis</CardTitle>
-          <CardDescription>
-            Upload up to 4 documents to find contradictions and overlaps using Gemini AI.
-          </CardDescription>
+            <CardTitle>Compare Documents</CardTitle>
+            <CardDescription>
+                Upload two documents to find contradictions, text changes, and similarities.
+            </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-6">
@@ -205,7 +249,7 @@ export function UploadDocuments() {
 
             {files.length > 0 && (
               <div className="mt-4 space-y-2">
-                <h3 className="font-medium">Documents ({files.length}/4):</h3>
+                <h3 className="font-medium">Documents (First 2 will be compared):</h3>
                 <ScrollArea className="h-60 pr-4">
                   <ul className="space-y-3">
                     {files.map((file, index) => (
@@ -238,14 +282,17 @@ export function UploadDocuments() {
             )}
           </CardContent>
           <CardFooter className="border-t pt-6">
-            <Button type="submit" disabled={isProcessing || files.length < 2 || files.length > 4}>
+            <Button type="submit" disabled={isProcessing || files.length < 2}>
                 {isProcessing ? (
                     <>
                     <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
-                    Analyzing...
+                    Comparing...
                     </>
                 ) : (
-                    'Analyze Documents'
+                    <>
+                    <GitCompare className="mr-2 h-4 w-4" />
+                    Compare Documents
+                    </>
                 )}
             </Button>
           </CardFooter>
@@ -253,41 +300,59 @@ export function UploadDocuments() {
       </Card>
 
       <Dialog open={isResultOpen} onOpenChange={setIsResultOpen}>
-        <DialogContent className="sm:max-w-4xl h-[90vh] flex flex-col">
+        <DialogContent className="sm:max-w-4xl max-h-[85vh] flex flex-col overflow-hidden">
           <DialogHeader>
-            {report && (
-              <DialogTitle className="flex items-center gap-2">
-                <CheckCircle className="h-6 w-6 text-green-500" />
-                Analysis Complete
-              </DialogTitle>
-            )}
-            {error && (
-              <DialogTitle className="flex items-center gap-2">
-                <AlertTriangle className="h-6 w-6 text-destructive" />
-                Analysis Failed
-              </DialogTitle>
-            )}
-            <DialogDescription>
-              {report
-                ? `Found ${report.conflicts} potential conflicts across ${report.files} documents.`
-                : 'An error occurred during analysis.'}
-            </DialogDescription>
+             <DialogTitle>Comparison Results</DialogTitle>
+             <DialogDescription>
+                Analysis between {files[0]?.name} and {files[1]?.name}
+             </DialogDescription>
           </DialogHeader>
-          <div className="flex-1 min-h-0">
-            <ScrollArea className="h-full pr-4">
-              {report && (
-                 <div className="prose prose-sm dark:prose-invert max-w-none p-4">
-                    <ReactMarkdown>{report.reportContent}</ReactMarkdown>
-                 </div>
-              )}
-              {error && (
+          <div className="flex-1 overflow-auto min-h-0">
+             <div className="p-1 space-y-8 pr-4">
+              {report ? (
+                 <>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <Card>
+                            <CardHeader className="p-4 pb-2"><CardTitle className="text-sm">Matches</CardTitle></CardHeader>
+                            <CardContent className="p-4 pt-0 text-2xl font-bold text-green-500">{report.matchCount}</CardContent>
+                        </Card>
+                        <Card>
+                            <CardHeader className="p-4 pb-2"><CardTitle className="text-sm">Potential Conflicts</CardTitle></CardHeader>
+                            <CardContent className="p-4 pt-0 text-2xl font-bold text-yellow-500">{report.conflicts.length}</CardContent>
+                        </Card>
+                        <Card>
+                            <CardHeader className="p-4 pb-2"><CardTitle className="text-sm">Unique Sentences</CardTitle></CardHeader>
+                            <CardContent className="p-4 pt-0 text-2xl font-bold text-blue-500">{report.uniqueToA.length + report.uniqueToB.length}</CardContent>
+                        </Card>
+                    </div>
+
+                    <div>
+                        <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                             <AlertTriangle className="h-5 w-5 text-yellow-500" />
+                             Potential Conflicts & Edits
+                        </h3>
+                        <DiffView conflicts={report.conflicts} />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                             <h3 className="text-lg font-semibold mb-3 text-blue-500">Unique to {files[0]?.name}</h3>
+                             <UniqueView items={report.uniqueToA} docName={files[0]?.name} />
+                        </div>
+                        <div>
+                             <h3 className="text-lg font-semibold mb-3 text-purple-500">Unique to {files[1]?.name}</h3>
+                             <UniqueView items={report.uniqueToB} docName={files[1]?.name} />
+                        </div>
+                    </div>
+                 </>
+              ) : error ? (
                 <div className="text-sm text-destructive bg-destructive/10 p-4 rounded-md">
                   {error}
                 </div>
-              )}
-            </ScrollArea>
+              ) : null}
+            </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="mt-2">
             <Button variant="outline" onClick={closeDialog}>
               Close
             </Button>
